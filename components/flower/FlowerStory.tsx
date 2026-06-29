@@ -115,6 +115,13 @@ export function FlowerStory({
           >
             <span className="cta-design-text">Design Flower</span>
           </button>
+          <a
+            className="cta-design cta-design--full liquid-glass-strong"
+            href="/demo"
+            aria-label="Open the playground demo"
+          >
+            <span className="cta-design-text">Playground</span>
+          </a>
         </div>
       ) : (
         <button
