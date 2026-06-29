@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 
 /**
- * Optional linkage to the live 3D flower (the /social showcase). A demo fires
+ * Optional linkage to the live 3D flower (the /demo showcase). A demo fires
  * `onSync` with the flower params it controls while it is the `active` card, so
  * its on-screen controls drive the real bloom. Omitted on the landing page,
  * where the demos are purely illustrative.

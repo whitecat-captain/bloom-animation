@@ -1,7 +1,8 @@
 /* ============================================================
-   Scarlet dahlia showcase — reuses the /social 9:16 layout and
-   only retheme the accents (blue -> scarlet), drops in a
-   botanical backdrop, and adds the masthead.
+   Scarlet dahlia showcase — the /demo deck, unchanged, on a
+   different flower. We only retint: a scarlet accent on the
+   shared chrome, a botanical backdrop, and a red wash over the
+   2D demo canvases so they read in the same scarlet family.
    ============================================================ */
 
 .dahlia {
@@ -19,70 +20,14 @@
     #060a06;
 }
 
-/* ===== masthead ===== */
-.dahlia-masthead {
-  position: fixed;
-  top: 5vh;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  text-align: center;
-  pointer-events: none;
-}
-.dahlia-kicker,
-.dahlia-latin {
-  font-family: "Outfit", system-ui, sans-serif;
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.5);
-}
-.dahlia-name {
-  margin: 0;
-  font-family: "Playfair Display", Georgia, serif;
-  font-size: clamp(34px, 6vw, 52px);
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.95);
-  text-shadow: 0 0 56px rgba(255, 70, 50, 0.55);
-}
-.dahlia-latin {
-  font-style: italic;
-  letter-spacing: 0.1em;
-  text-transform: none;
-  color: rgba(255, 255, 255, 0.42);
+/* ===== 2D demos: same figures as /demo, washed into the scarlet family =====
+   The canvases are drawn with the engine's blue→amber ramp; this rotates the
+   whole figure into reds so the demo area matches the flower. */
+.dahlia .demo-canvas {
+  filter: sepia(1) saturate(4.2) hue-rotate(-22deg) brightness(1.02);
 }
 
-/* ===== card body ===== */
-.dahlia .step-no {
-  color: var(--accent);
-}
-.dahlia .step-card h2 {
-  font-family: "Playfair Display", Georgia, serif;
-  letter-spacing: 0.04em;
-}
-.dahlia-controls {
-  margin-top: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.dahlia-note {
-  margin: 0 0 4px;
-  font-size: 12.5px;
-  font-weight: 300;
-  line-height: 1.7;
-  text-align: left;
-  color: rgba(255, 255, 255, 0.62);
-}
-
-/* retheme the reused /social control accents from blue to scarlet */
+/* ===== retint the shared chrome accents from blue to scarlet ===== */
 .dahlia .demo-slider-val {
   color: var(--accent);
 }
@@ -90,11 +35,10 @@
   background: var(--accent-soft);
   color: var(--accent);
 }
-.dahlia .social-dot[data-active="true"],
-.dahlia .rail-fill {
+.dahlia .demo-dot[data-active="true"] {
   background: var(--accent);
 }
-.dahlia .social-railbar input[type="range"]::-webkit-slider-thumb {
+.dahlia .demo-railbar input[type="range"]::-webkit-slider-thumb {
   background: var(--accent);
   box-shadow: 0 0 10px rgba(255, 138, 115, 0.6);
 }
@@ -102,10 +46,4 @@
 .dahlia .demo-slider input[type="range"]::-moz-range-thumb {
   background: var(--accent);
   box-shadow: 0 0 10px rgba(255, 138, 115, 0.55);
-}
-
-@media (max-width: 760px) {
-  .dahlia-masthead {
-    top: 3.5vh;
-  }
 }

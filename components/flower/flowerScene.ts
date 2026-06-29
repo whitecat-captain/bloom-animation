@@ -781,13 +781,13 @@ void main() {
       params.curlClosed = v;
       uniforms.uCurlClosed.value = v;
     },
-    /** Open-petal curl — what's visible on a bloomed flower (/social card 01). */
+    /** Open-petal curl — what's visible on a bloomed flower (/demo card 01). */
     setCurlOpen(v: number) {
       const c = THREE.MathUtils.clamp(v, -1.5, 1.2);
       params.curlOpen = c;
       uniforms.uCurlOpen.value = c;
     },
-    /** Petal width ramp [w0..w3] — driven by the /social "Folded petal" card. */
+    /** Petal width ramp [w0..w3] — driven by the /demo "Folded petal" card. */
     setPetalWidths([w0, w1, w2, w3]: number[]) {
       params.w0 = w0;
       params.w1 = w1;
@@ -795,7 +795,7 @@ void main() {
       params.w3 = w3;
       bakeRamps();
     },
-    /** Bloom wavefront width — driven by the /social "Bloom dial" card. */
+    /** Bloom wavefront width — driven by the /demo "Bloom dial" card. */
     setTransition(v: number) {
       params.transition = v;
       uniforms.uTransition.value = v;
@@ -845,7 +845,7 @@ void main() {
       syncShapeUniforms();
       buildFlower();
     },
-    /** Show/hide the stem + leaves (/social hides it on the single-petal card). */
+    /** Show/hide the stem + leaves (/demo hides it on the single-petal card). */
     setStemVisible(show: boolean) {
       if (stemParams.show === show) return;
       stemParams.show = show;

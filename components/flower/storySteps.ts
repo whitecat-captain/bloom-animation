@@ -11,7 +11,7 @@ import {
 export type FlowerStep = {
   no: string;
   title: string;
-  /** Condensed title for tight layouts (e.g. the /social card stack). */
+  /** Condensed title for tight layouts (e.g. the /demo card stack). */
   short: string;
   body: string;
   Demo: ComponentType<DemoSyncProps>;
