@@ -1,0 +1,111 @@
+/* ============================================================
+   Scarlet dahlia showcase — reuses the /social 9:16 layout and
+   only retheme the accents (blue -> scarlet), drops in a
+   botanical backdrop, and adds the masthead.
+   ============================================================ */
+
+.dahlia {
+  --accent: #ff8a73;
+  --accent-soft: rgba(255, 138, 115, 0.16);
+}
+
+/* Soft botanical backdrop behind the (transparent) WebGL canvas — echoes the
+   green-bokeh field of the photo without competing with the bloom. */
+.dahlia .canvas-container {
+  background:
+    radial-gradient(circle at 50% 36%, rgba(255, 70, 60, 0.16), transparent 42%),
+    radial-gradient(circle at 78% 16%, rgba(120, 180, 70, 0.1), transparent 34%),
+    radial-gradient(circle at 18% 86%, rgba(40, 110, 60, 0.14), transparent 40%),
+    #060a06;
+}
+
+/* ===== masthead ===== */
+.dahlia-masthead {
+  position: fixed;
+  top: 5vh;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  pointer-events: none;
+}
+.dahlia-kicker,
+.dahlia-latin {
+  font-family: "Outfit", system-ui, sans-serif;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+.dahlia-name {
+  margin: 0;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: clamp(34px, 6vw, 52px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 0 56px rgba(255, 70, 50, 0.55);
+}
+.dahlia-latin {
+  font-style: italic;
+  letter-spacing: 0.1em;
+  text-transform: none;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+/* ===== card body ===== */
+.dahlia .step-no {
+  color: var(--accent);
+}
+.dahlia .step-card h2 {
+  font-family: "Playfair Display", Georgia, serif;
+  letter-spacing: 0.04em;
+}
+.dahlia-controls {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dahlia-note {
+  margin: 0 0 4px;
+  font-size: 12.5px;
+  font-weight: 300;
+  line-height: 1.7;
+  text-align: left;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+/* retheme the reused /social control accents from blue to scarlet */
+.dahlia .demo-slider-val {
+  color: var(--accent);
+}
+.dahlia .demo-chip.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.dahlia .social-dot[data-active="true"],
+.dahlia .rail-fill {
+  background: var(--accent);
+}
+.dahlia .social-railbar input[type="range"]::-webkit-slider-thumb {
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(255, 138, 115, 0.6);
+}
+.dahlia .demo-slider input[type="range"]::-webkit-slider-thumb,
+.dahlia .demo-slider input[type="range"]::-moz-range-thumb {
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(255, 138, 115, 0.55);
+}
+
+@media (max-width: 760px) {
+  .dahlia-masthead {
+    top: 3.5vh;
+  }
+}

@@ -1,0 +1,302 @@
+/* ============================================================
+   Social showcase — 9:16 vertical frame, no scroll.
+   Flower is the subject in the upper region; the demos live in
+   a card stack pinned to the bottom 2/5. Overrides flower.css.
+   ============================================================ */
+
+.social {
+  /* the recording frame: a centered 9:16 column of the viewport height */
+  --frame-w: min(100vw, calc(100vh * 9 / 16));
+  /* inset of the side arrows / counter from the column edge */
+  --edge: calc(50% - var(--frame-w) / 2);
+  /* raise the flower so its head centres in the upper 3/5, clear of the card */
+  --flower-shift: -7vh;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* WebGL layer clamped to the column (canvas inside is width:100% !important) */
+.social .canvas-container {
+  left: 50%;
+  right: auto;
+  width: var(--frame-w);
+  transform: translateX(-50%) translateY(var(--flower-shift));
+}
+
+/* Visible 9:16 boundary — a guide for layout and screen-recording. */
+.social-bounds {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: var(--frame-w);
+  transform: translateX(-50%);
+  z-index: 40;
+  pointer-events: none;
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.1),
+    inset -1px 0 0 rgba(255, 255, 255, 0.1);
+}
+
+/* ===== one demo card, centred in the lower region ===== */
+/* Nav lives off-frame (in the letterbox), so the card gets the full lower
+   area and keeps the landing page's generous spacing. */
+.social-stack {
+  position: fixed;
+  left: 50%;
+  top: 53vh;
+  bottom: 3vh;
+  transform: translateX(-50%);
+  width: min(480px, calc(var(--frame-w) - 24px));
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.social-card {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  margin: 0;
+  width: 100%;
+  /* spacing/padding/line-height all inherited from flower.css .step-card */
+  text-align: center;
+  transform: translateY(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+/* only the active card is shown and reachable; the rest stay mounted, hidden */
+.social-card[data-active="true"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+.social-fig {
+  width: 100%;
+}
+/* drop the demo's descriptive caption — the title labels the card */
+.social .demo-note {
+  display: none;
+}
+
+/* Debug-only Reset (top-right) and play/pause (top-left): invisible at rest,
+   visible only when the pointer is directly over the (still-hoverable) button. */
+.social .demo-chip--reset,
+.social .demo-chip--play {
+  position: absolute;
+  top: 11px;
+  margin: 0;
+  z-index: 4;
+  opacity: 0;
+  pointer-events: auto;
+  transition: opacity 0.2s ease;
+}
+.social .demo-chip--reset {
+  right: 14px;
+}
+.social .demo-chip--play {
+  left: 14px;
+}
+.social .demo-chip--reset:hover,
+.social .demo-chip--play:hover {
+  opacity: 1;
+}
+
+/* ===== side navigation arrows ===== */
+/* arrows sit in the side letterboxes — usable by the operator, cropped out
+   of the 9:16 recording frame */
+.social-arrow {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.82);
+}
+.social-arrow--prev {
+  left: max(6px, calc(var(--edge) - 38px));
+}
+.social-arrow--next {
+  right: max(6px, calc(var(--edge) - 38px));
+}
+.social-arrow svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.social-arrow:active {
+  transform: translateY(-50%) scale(0.92);
+}
+
+/* ===== off-frame control bar (One Draw Call) — left letterbox ===== */
+.social-railbar {
+  position: fixed;
+  left: calc(var(--edge) / 2);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.social-railbar input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 4px;
+  height: 36vh;
+  background: transparent;
+  cursor: pointer;
+}
+.social-railbar input[type="range"]::-webkit-slider-runnable-track {
+  width: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.18);
+}
+.social-railbar input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-left: -5.5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.45);
+}
+.social-railbar-label,
+.social-railbar-val {
+  font-family: "Outfit", system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+.social-railbar-val {
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* ===== pagination dots — in the right letterbox, off the recording frame ===== */
+.social-dots {
+  position: fixed;
+  right: calc(var(--edge) / 2);
+  bottom: 4vh;
+  transform: translateX(50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.social-dot {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.28);
+  transition:
+    width 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.35s ease;
+}
+.social-dot[data-active="true"] {
+  width: 22px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+/* ===== Bloom mode: hide the deck UI, show a centred replay button ===== */
+.social--bloom .social-stack,
+.social--bloom .social-arrow,
+.social--bloom .social-dots {
+  display: none;
+}
+
+.social-bloom-btn {
+  position: fixed;
+  left: 50%;
+  bottom: 3vh;
+  transform: translateX(-50%);
+  z-index: 45;
+  display: none; /* shown only in Bloom mode */
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 22px 12px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-family: "Outfit", system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.92);
+  white-space: nowrap;
+}
+.social--bloom .social-bloom-btn {
+  display: inline-flex;
+}
+.social-bloom-btn .bloom-btn-icon {
+  width: 11px;
+  height: 11px;
+  fill: currentColor;
+}
+.social-bloom-btn:active {
+  transform: translateX(-50%) translateY(1px);
+}
+
+/* ===== mode toggle — in the left letterbox, off the recording frame ===== */
+.social-switch {
+  position: fixed;
+  left: calc(var(--edge) / 2);
+  transform: translateX(-50%);
+  bottom: 4vh;
+  z-index: 46;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.45);
+  opacity: 0.35;
+  transition:
+    opacity 0.2s ease,
+    color 0.2s ease;
+}
+.social-switch svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.social-switch:hover {
+  opacity: 1;
+  color: rgba(255, 255, 255, 0.9);
+}

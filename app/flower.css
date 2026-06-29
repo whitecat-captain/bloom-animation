@@ -1,0 +1,1150 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,700;0,800;0,900;1,400;1,500;1,600&family=Caveat:wght@500;600;700&display=swap');
+
+/* ===== Reusable liquid-glass utilities ===== */
+.liquid-glass,
+.liquid-glass-strong {
+  position: relative;
+  overflow: hidden;
+  border: none;
+  background-blend-mode: luminosity;
+}
+.liquid-glass {
+  background: rgba(255, 255, 255, 0.01);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+.liquid-glass-strong {
+  background: rgba(255, 255, 255, 0.01);
+  backdrop-filter: blur(50px) saturate(150%);
+  -webkit-backdrop-filter: blur(50px) saturate(150%);
+  box-shadow:
+    4px 4px 4px rgba(0, 0, 0, 0.05),
+    inset 0 1px 1px rgba(255, 255, 255, 0.15);
+}
+/* gradient hairline border, masked to a 1.4px ring */
+.liquid-glass::before,
+.liquid-glass-strong::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
+}
+.liquid-glass::before {
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.15) 20%,
+    transparent 40%, transparent 60%,
+    rgba(255, 255, 255, 0.15) 80%, rgba(255, 255, 255, 0.45) 100%);
+}
+.liquid-glass-strong::before {
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.2) 20%,
+    transparent 40%, transparent 60%,
+    rgba(255, 255, 255, 0.2) 80%, rgba(255, 255, 255, 0.5) 100%);
+}
+
+/* ===== Flower stage ===== */
+.app-container {
+  position: relative;
+  width: 100%;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  /* background: #00091B; */
+   background: #000;
+  /* Bottom design panel geometry; shared so the canvas push stays in sync. */
+  --panel-h: 272px;
+  --panel-gap: 28px;
+}
+/* fixed full-viewport layer: bg gradients + WebGL canvas, story scrolls above */
+.canvas-container {
+  position: fixed;
+  top: 0; bottom: 0; left: 0; right: 0;
+  z-index: 1;
+  background:#000;
+    /* radial-gradient(circle at 50% 46%, rgba(42, 91, 207, 0.18), transparent 34%),
+    radial-gradient(circle at 80% 20%, rgba(245, 158, 11, 0.08), transparent 26%),
+    #00091B; */
+  transition: bottom 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* touch devices: swipe must scroll the story, not orbit the camera */
+@media (hover: none) {
+  .canvas-container { pointer-events: none; }
+}
+/* Panel rises from the bottom, so lift the flower up to make room. */
+.canvas-container.pushed { bottom: calc(var(--panel-h) + var(--panel-gap) + 28px); }
+.canvas-container canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  outline: none;
+}
+
+/* ===== Fixed chrome: progress rail ===== */
+.rail {
+  position: fixed;
+  left: 30px; bottom: 28px;
+  z-index: 5;
+  pointer-events: none;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 12px;
+  font-family: 'Outfit', sans-serif;
+}
+.rail-no {
+  font-size: 11px; font-weight: 500; letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+.rail-track {
+  display: block;
+  width: 1.5px; height: 92px;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 1px;
+  overflow: hidden;
+}
+.rail-fill {
+  display: block;
+  width: 100%; height: 100%;
+  background: linear-gradient(180deg, #ffb16e, #ff5a2e);
+  transform: scaleY(0);
+  transform-origin: top;
+}
+
+/* ===== Scroll story ===== */
+.story {
+  position: relative;
+  z-index: 2;
+  pointer-events: none; /* canvas below keeps drag-to-orbit; cards re-enable */
+}
+.app-container.designer-open .story,
+.app-container.designer-open .rail,
+.app-container.designer-open .cta-design,
+.app-container.designer-open .finale-actions {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden;
+}
+
+/* --- hero --- */
+.hero-section {
+  min-height: 100vh;
+  display: grid;
+  align-items: start;
+  justify-items: center;
+  position: relative;
+  overflow: hidden;
+  padding: 72px 4vw 132px;
+  color: rgba(255, 255, 255, 0.92);
+}
+.hero-magazine {
+  position: relative;
+  width: min(1780px, calc(100vw - 112px));
+  min-height: 640px;
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr) 300px;
+  grid-template-rows: auto 1fr auto auto;
+  align-items: center;
+  column-gap: 56px;
+  border-top: 1px solid rgba(255, 255, 255, 0.24);
+}
+.hero-magazine::before,
+.hero-magazine::after {
+  content: '';
+  position: absolute;
+  top: 74px;
+  bottom: 88px;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(255, 255, 255, 0.22),
+    transparent
+  );
+}
+.hero-magazine::before { left: 240px; }
+.hero-magazine::after { right: 300px; }
+.hero-edition,
+.hero-folio {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr) 300px;
+  column-gap: 56px;
+  margin: 0;
+  padding: 18px 0;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.48);
+}
+.hero-edition {
+  position: absolute;
+  top: -52px;
+  left: 0;
+  right: 0;
+}
+.hero-edition span:nth-child(2) { text-align: center; }
+.hero-edition span:nth-child(3),
+.hero-folio span:nth-child(2) {
+  text-align: right;
+}
+.hero-folio span:nth-child(2) {
+  grid-column: 3;
+}
+.hero-side-note {
+  margin: 0;
+  max-width: 190px;
+  font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.55;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.46);
+}
+.hero-side-note--left {
+  grid-column: 1;
+  align-self: start;
+  padding-top: 74px;
+}
+.hero-side-note--right {
+  grid-column: 3;
+  justify-self: end;
+  align-self: start;
+  padding-top: 74px;
+  text-align: right;
+}
+.hero-title {
+  margin: 0;
+  display: flex; flex-direction: column;
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: center;
+  align-items: flex-start;
+  width: min(950px, 100%);
+  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  font-size: 80px;
+  font-weight: 500;
+  line-height: 1.02;
+  letter-spacing: 0;
+  text-align: left;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 0 80px rgba(42, 91, 207, 0.5);
+}
+.hero-line { display: block; will-change: transform; }
+.hero-line:nth-child(2) { padding-left: 34px; }
+.hero-line:nth-child(3) { padding-left: 78px; }
+/* editorial rhythm: italic words woven through the roman lines */
+.hero-line em {
+  font-style: italic;
+  color: #fff;
+}
+.hero-deck {
+  grid-column: 2;
+  grid-row: 3;
+  width: min(430px, 100%);
+  margin: 0;
+  padding: 0 0 26px 80px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 300;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.66);
+}
+@media (max-width: 980px) {
+  .hero-magazine {
+    grid-template-columns: 138px minmax(0, 1fr) 140px;
+    column-gap: 24px;
+  }
+  .hero-magazine::before { left: 138px; }
+  .hero-magazine::after { right: 140px; }
+  .hero-edition,
+  .hero-folio {
+    grid-template-columns: 138px minmax(0, 1fr) 140px;
+    column-gap: 24px;
+  }
+  .hero-side-note {
+    max-width: 104px;
+    font-size: 9.5px;
+    letter-spacing: 0.16em;
+  }
+  .hero-title {
+    font-size: 66px;
+    width: min(660px, 100%);
+  }
+  .hero-line:nth-child(2) { padding-left: 22px; }
+  .hero-line:nth-child(3) { padding-left: 42px; }
+  .hero-deck {
+    padding-left: 42px;
+  }
+}
+@media (max-width: 760px) {
+  .hero-section {
+    padding: 92px 24px 142px;
+  }
+  .hero-magazine {
+    width: 100%;
+    min-height: 520px;
+    display: block;
+    border-top-color: rgba(255, 255, 255, 0.18);
+  }
+  .hero-magazine::before,
+  .hero-magazine::after,
+  .hero-side-note {
+    display: none;
+  }
+  .hero-edition,
+  .hero-folio {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 16px 0;
+    font-size: 10px;
+  }
+  .hero-edition {
+    position: static;
+  }
+  .hero-edition span:nth-child(2) {
+    display: none;
+  }
+  .hero-title {
+    margin-top: 74px;
+    font-size: 48px;
+  }
+  .hero-line:nth-child(2) { padding-left: 16px; }
+  .hero-line:nth-child(3) { padding-left: 0; }
+  .hero-deck {
+    width: min(320px, 100%);
+    padding: 20px 0 88px 16px;
+    font-size: 14px;
+  }
+}
+.scroll-cue {
+  position: absolute;
+  bottom: 36px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 10px; font-weight: 400;
+  letter-spacing: 0.3em; text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+}
+.scroll-cue i {
+  width: 1px; height: 44px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), transparent);
+  animation: cue-drop 2.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+@keyframes cue-drop {
+  0% { transform: scaleY(0); transform-origin: top; }
+  45% { transform: scaleY(1); transform-origin: top; }
+  55% { transform: scaleY(1); transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; }
+}
+
+/* --- explainer steps --- */
+.step {
+  min-height: 100vh;
+  display: flex; align-items: center;
+  padding: 24px 7vw;
+}
+.step--right { justify-content: flex-end; }
+.step-card {
+  pointer-events: auto;
+  width: min(540px, 100%);
+  padding: 24px 30px 22px;
+  border-radius: 26px;
+  /* readability over the bright flower */
+  background: rgba(2, 10, 31, 0.52);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+.step-no {
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px; font-weight: 600;
+  letter-spacing: 0.3em;
+  color: #8fd3ff;
+}
+.step-card h2 {
+  margin: 10px 0 10px;
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(26px, 2.6vw, 33px);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.95);
+}
+.step-card p {
+  margin: 0;
+  font-size: 14.5px; font-weight: 300; line-height: 1.75;
+  color: rgba(255, 255, 255, 0.68);
+}
+.step-code {
+  display: block;
+  margin: 14px 0 0;
+  padding: 11px 14px;
+  border-radius: 11px;
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-size: 12px;
+  line-height: 1.65;
+  letter-spacing: 0.01em;
+  color: #8fd3ff;
+  background: rgba(143, 211, 255, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(143, 211, 255, 0.12);
+  white-space: pre;
+  overflow-x: auto;
+  tab-size: 2;
+}
+.step-code::-webkit-scrollbar { height: 5px; }
+.step-code::-webkit-scrollbar-thumb {
+  background: rgba(143, 211, 255, 0.2); border-radius: 3px;
+}
+
+/* --- interactive figures --- */
+.step-fig { margin: 16px 0 0; }
+.step-fig figcaption {
+  margin-top: 8px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px; font-weight: 300;
+  letter-spacing: 0.05em; line-height: 1.5;
+  color: rgba(255, 255, 255, 0.42);
+}
+.demo-canvas {
+  display: block;
+  width: 100%; height: clamp(150px, 20vh, 200px);
+  border-radius: 14px;
+  background: rgba(0, 9, 27, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+.demo-controls {
+  margin-top: 12px;
+  display: flex; flex-direction: column; gap: 9px;
+}
+.demo-slider {
+  display: flex; align-items: center; gap: 12px;
+  cursor: pointer;
+}
+.demo-slider-name {
+  flex: 0 0 96px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 10.5px; font-weight: 400;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+.demo-slider-val {
+  flex: 0 0 52px;
+  text-align: right;
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-size: 11px;
+  color: #8fd3ff;
+  font-variant-numeric: tabular-nums;
+}
+.demo-slider input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+}
+.demo-slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 3px; border-radius: 2px;
+  background: rgba(255, 255, 255, 0.16);
+}
+.demo-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px; height: 13px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.45);
+}
+.demo-slider input[type="range"]::-moz-range-track {
+  height: 3px; border-radius: 2px;
+  background: rgba(255, 255, 255, 0.16);
+}
+.demo-slider input[type="range"]::-moz-range-thumb {
+  width: 13px; height: 13px;
+  border: none; border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.45);
+}
+.demo-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.demo-chip {
+  padding: 5px 11px;
+  border: none; border-radius: 99px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px; font-weight: 400; letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.07);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.demo-chip:hover { background: rgba(255, 255, 255, 0.14); color: #fff; }
+.demo-chip.active {
+  background: rgba(143, 211, 255, 0.18);
+  color: #8fd3ff;
+}
+.demo-chip--reset {
+  margin-left: auto; /* push to the right edge of the chips row */
+  letter-spacing: 0.08em;
+}
+.demo-note {
+  margin: 2px 0 0;
+  font-size: 11.5px; font-weight: 300;
+  letter-spacing: 0.02em; line-height: 1.5;
+  color: rgba(255, 255, 255, 0.45);
+}
+.demo-note strong { color: #8fd3ff; font-weight: 500; }
+
+/* --- finale --- */
+.finale {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center;
+  padding: 0 24px;
+}
+.finale-inner { max-width: 560px; }
+.finale-title {
+  margin: 0;
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(40px, 6.5vw, 76px);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  color: #fff;
+  text-shadow: 0 0 60px rgba(42, 91, 207, 0.5);
+}
+.finale-sub {
+  margin: 22px 0 0;
+  font-size: 15px; font-weight: 300; line-height: 1.7;
+  color: rgba(255, 255, 255, 0.62);
+}
+.finale-hint {
+  margin: 30px 0 0;
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px; font-weight: 300;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* ===== Settings panel shell ===== */
+/* Bottom-anchored, horizontally centred panel that slides up from below.
+   Left column = Option Tab rail, right column = Control Bar. */
+.gui-container {
+  position: fixed;
+  left: 50%;
+  bottom: var(--panel-gap);
+  z-index: 10;
+  width: min(760px, calc(100vw - 44px));
+  height: var(--panel-h);
+  display: flex;
+  flex-direction: row;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 22px;
+  transform: translateX(-50%) translateY(0);
+  transition: opacity 0.32s ease,
+    transform 0.44s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.gui-container.collapsed {
+  opacity: 0;
+  transform: translateX(-50%) translateY(calc(100% + var(--panel-gap)));
+  pointer-events: none;
+}
+
+/* --- left: Option Tab rail --- */
+.gui-tabs {
+  flex: 0 0 146px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-right: 12px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.gui-tabs::-webkit-scrollbar { display: none; }
+.gui-tab {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.gui-tab:hover { color: rgba(255, 255, 255, 0.9); background: rgba(255, 255, 255, 0.05); }
+.gui-tab.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+/* Presenter-only reset chips: same pill as the explanation-section reset,
+   pinned to the rail bottom but hidden until Option/Alt is held (the
+   `reveal-tools` class is toggled in flowerScene). */
+.gui-reset,
+.gui-section-reset {
+  align-self: flex-start;
+  margin-left: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+.gui-reset {
+  margin-top: auto;
+}
+.gui-section-reset {
+  margin-top: 6px;
+}
+.gui-tabs.reveal-tools .gui-reset,
+.gui-tabs.reveal-tools .gui-section-reset {
+  opacity: 0.85;
+  pointer-events: auto;
+}
+.gui-tabs.reveal-tools .gui-reset:hover,
+.gui-tabs.reveal-tools .gui-section-reset:hover {
+  opacity: 1;
+}
+
+/* --- right: Control Bar --- */
+.gui-scroll {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 8px 6px 2px;
+}
+.gui-scroll::-webkit-scrollbar { width: 6px; }
+.gui-scroll::-webkit-scrollbar-track { background: transparent; }
+.gui-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15); border-radius: 3px;
+}
+.gui-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+
+/* ===== Settings toggle button ===== */
+.settings-btn {
+  position: fixed;
+  top: 26px; right: 28px;
+  z-index: 20;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  display: grid; place-items: center;
+  color: rgba(255, 255, 255, 0.9);
+  transition: transform 0.18s cubic-bezier(0.34, 1.4, 0.64, 1), opacity 0.2s ease;
+}
+.settings-btn:hover { transform: scale(1.05); }
+.settings-btn:active { transform: scale(0.95); }
+.settings-btn svg { width: 13px; height: 13px; }
+.settings-btn.collapsed {
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+}
+
+/* ===== Finale actions: Bloom + Design Flower, centered as a pair ===== */
+.finale-actions {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 118px;
+  z-index: 8;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  pointer-events: none; /* empty strip must not block canvas drag */
+}
+.finale-actions > * { pointer-events: auto; }
+/* Neutralise the CTA's own fixed centering so flex can lay the pair out. The
+   :hover/:active overrides are needed because the base CTA re-applies a
+   translateX(-50%) on those states, which would slide it back over Bloom. */
+.finale-actions .cta-design--full {
+  position: static;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  transform: none;
+}
+.finale-actions .cta-design--full:hover { transform: translateY(-1px); }
+.finale-actions .cta-design--full:active { transform: translateY(0); }
+
+/* ===== Bloom button ===== */
+.bloom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px 13px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.055);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.24),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.34);
+  transition:
+    transform 0.18s cubic-bezier(0.34, 1.4, 0.64, 1),
+    opacity 0.3s ease;
+}
+.bloom-btn::before { display: none; }
+.bloom-btn:hover { transform: translateY(-1px); }
+.bloom-btn:active { transform: translateY(0); }
+.bloom-btn-icon {
+  position: relative;
+  z-index: 2;
+  width: 11px;
+  height: 11px;
+  fill: currentColor;
+}
+.bloom-btn-text { position: relative; z-index: 2; }
+
+/* ===== Design Flower CTA ===== */
+.cta-design {
+  position: fixed;
+  right: 28px; bottom: 24px;
+  z-index: 8;
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 13px 26px;
+  border-radius: 99px;
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px; font-weight: 500; letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.95);
+  white-space: nowrap;
+  transition:
+    left 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    right 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    bottom 0.24s ease,
+    transform 0.18s cubic-bezier(0.34, 1.4, 0.64, 1),
+    opacity 0.3s ease,
+    padding 0.24s ease,
+    font-size 0.24s ease,
+    gap 0.24s ease;
+}
+.cta-design--full {
+  left: 50%;
+  right: auto;
+  bottom: 118px;
+  min-width: 178px;
+  gap: 11px;
+  padding: 12px 24px 13px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.24),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.34);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.9);
+  transform: translateX(-50%);
+}
+.cta-design--full::before { display: none; }
+.cta-design--mini {
+  left: auto;
+  right: 28px;
+  bottom: 24px;
+  width: 46px;
+  height: 46px;
+  min-width: 0;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  opacity: 0.88;
+}
+.cta-design.shifted { right: 428px; }
+.cta-design--full.shifted {
+  left: calc(50% - 200px);
+  right: auto;
+}
+.cta-design .dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: linear-gradient(135deg, #ffb16e, #ff5a2e);
+  box-shadow: 0 0 10px rgba(255, 110, 60, 0.8);
+}
+.cta-design--full .dot {
+  width: 7px;
+  height: 7px;
+  opacity: 1;
+}
+.cta-design--mini .dot {
+  width: 6px;
+  height: 6px;
+}
+.cta-design-text { position: relative; z-index: 2; }
+.flower-icon {
+  position: relative;
+  z-index: 2;
+  width: 21px;
+  height: 21px;
+  overflow: visible;
+}
+.flower-icon-petal {
+  fill: rgba(255, 255, 255, 0.82);
+}
+.flower-icon-core {
+  fill: #ff8b5b;
+  filter: drop-shadow(0 0 6px rgba(255, 110, 60, 0.75));
+}
+.cta-design:hover { transform: scale(1.05); }
+.cta-design:active { transform: scale(0.95); }
+.cta-design--full:hover {
+  background: rgba(255, 255, 255, 0.095);
+  color: #fff;
+  transform: translateX(-50%) translateY(-1px);
+}
+.cta-design--full:active { transform: translateX(-50%) translateY(0); }
+.cta-design.hidden {
+  opacity: 0;
+  transform: translateY(12px) scale(0.96);
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .app-container { --panel-h: 42vh; --panel-gap: 12px; }
+  .canvas-container.pushed { bottom: calc(var(--panel-h) + var(--panel-gap) + 14px); }
+  .cta-design { right: 16px; bottom: 16px; padding: 12px 22px; }
+  .cta-design--full {
+    left: 50%;
+    right: auto;
+    bottom: 118px;
+    min-width: 166px;
+    padding: 11px 20px 12px;
+  }
+  .cta-design--mini {
+    left: auto;
+    right: 16px;
+    bottom: 16px;
+    width: 42px;
+    height: 42px;
+    min-width: 0;
+    padding: 0;
+  }
+  .cta-design.shifted { right: 16px; opacity: 0; pointer-events: none; }
+  .gui-container {
+    width: calc(100vw - 24px);
+    border-radius: 22px;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 12px 4px;
+  }
+  /* Tabs: single-row pill scroller. The scrollbar is hidden (it was the ugly
+     grey bar) and the trailing edge fades to hint there's more to swipe. */
+  .gui-tabs {
+    flex: 0 0 auto;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 6px;
+    padding: 0 0 10px;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    -webkit-mask-image: linear-gradient(
+      90deg, #000 0, #000 calc(100% - 26px), transparent 100%
+    );
+    mask-image: linear-gradient(
+      90deg, #000 0, #000 calc(100% - 26px), transparent 100%
+    );
+  }
+  .gui-tabs::-webkit-scrollbar { display: none; }
+  .gui-tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 7px 12px;
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 9px;
+  }
+  .gui-tab.active { background: rgba(255, 255, 255, 0.13); }
+  /* Presenter-only reset chips aren't reachable on touch — drop them. */
+  .gui-reset,
+  .gui-section-reset { display: none !important; }
+  /* Single-column, slightly tighter controls so more fit without scrolling. */
+  .gui-scroll .lil-root > .lil-children > .lil-gui > .lil-children,
+  .gui-scroll .lil-root > .lil-children > .lil-gui > .lil-children > .lil-gui > .lil-children {
+    column-count: 1 !important;
+  }
+  .gui-scroll .lil-controller { padding: 1px 4px !important; }
+  .gui-scroll .lil-controller.lil-number .lil-slider { height: 24px !important; }
+  .gui-scroll { padding: 2px 2px 0 0; }
+  .settings-btn { top: 18px; right: 18px; }
+  .rail { display: none; }
+  .step { padding: 0 18px; justify-content: center; }
+  .step--right { justify-content: center; }
+}
+
+/* ===== lil-gui flat glass theme ===== */
+.lil-gui {
+  --background-color: transparent !important;
+  --text-color: rgba(255, 255, 255, 0.78) !important;
+  --title-background-color: transparent !important;
+  --title-text-color: rgba(255, 255, 255, 0.5) !important;
+  --widget-color: rgba(255, 255, 255, 0.09) !important;
+  --hover-color: rgba(255, 255, 255, 0.16) !important;
+  --focus-color: rgba(255, 255, 255, 0.22) !important;
+  --number-color: rgba(255, 255, 255, 0.85) !important;
+  --string-color: #8fd3ff !important;
+  --font-family: 'Inter', 'Outfit', system-ui, sans-serif !important;
+  --font-size: 13px !important;
+  --input-font-size: 13px !important;
+  --padding: 7px !important;
+  --spacing: 6px !important;
+  --border-radius: 9px !important;
+  --widget-height: 26px !important;
+  --name-width: 44% !important;
+  --folder-indent: 0px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  border: none !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+}
+.lil-gui.lil-root > .lil-title { display: none !important; }
+.lil-gui .lil-gui {
+  border: none !important;
+  margin: 0 0 4px !important;
+  padding: 0 !important;
+}
+.lil-gui .lil-gui > .lil-children {
+  margin: 0 0 8px !important;
+  border-left: none !important;
+  padding: 7px 8px !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  background-blend-mode: luminosity;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: none !important;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1) !important;
+  border-radius: 16px !important;
+  position: relative;
+  overflow: hidden;
+}
+.lil-gui .lil-gui > .lil-children::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.4px;
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.15) 20%,
+    transparent 40%, transparent 60%,
+    rgba(255, 255, 255, 0.15) 80%, rgba(255, 255, 255, 0.45) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.lil-gui .lil-gui.lil-closed > .lil-children,
+.lil-gui.lil-closed > .lil-children {
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.lil-gui .lil-gui.lil-closed > .lil-children::before,
+.lil-gui.lil-closed > .lil-children::before { display: none !important; }
+.lil-gui .lil-gui > .lil-title {
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+  font-size: 12px !important;
+  color: rgba(255, 255, 255, 0.45) !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 10px !important;
+  padding: 10px 10px 7px !important;
+  transition: color 0.2s ease !important;
+}
+.lil-gui .lil-gui > .lil-title:hover {
+  color: rgba(255, 255, 255, 0.92) !important;
+  background: transparent !important;
+}
+.lil-gui .lil-controller {
+  padding: 2px 6px !important;
+  border: none !important;
+}
+.lil-gui .lil-controller .lil-name {
+  font-weight: 400 !important;
+  color: rgba(255, 255, 255, 0.62) !important;
+  transition: color 0.15s ease !important;
+}
+.lil-gui .lil-controller:hover .lil-name { color: #fff !important; }
+.lil-gui .lil-controller.lil-number .lil-slider {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-radius: 99px !important;
+  height: 24px !important;
+  margin-top: 1px !important;
+  overflow: hidden !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+.lil-gui .lil-controller.lil-number .lil-slider .lil-fill {
+  background: rgba(255, 255, 255, 0.22) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+  border-right: none !important;
+  border-radius: 99px 0 0 99px !important;
+  transition: background 0.15s ease !important;
+}
+.lil-gui .lil-controller.lil-number .lil-slider:hover .lil-fill {
+  background: rgba(255, 255, 255, 0.32) !important;
+}
+.lil-gui .lil-controller.lil-number input {
+  background: transparent !important;
+  border: none !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  text-align: right !important;
+  font-variant-numeric: tabular-nums !important;
+}
+.lil-gui .lil-controller.lil-number input:focus {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-radius: 6px !important;
+  outline: none !important;
+}
+.lil-gui input[type="checkbox"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 44px !important;
+  height: 26px !important;
+  border-radius: 99px !important;
+  background-color: rgba(255, 255, 255, 0.16) !important;
+  background-image:
+    radial-gradient(circle 9.5px at 14px 13.6px, rgba(0,0,0,0.22) 58%, transparent 78%),
+    radial-gradient(circle 8.5px at 14px 13px, #fff 97%, transparent 100%) !important;
+  background-repeat: no-repeat !important;
+  background-position: 0 0, 0 0 !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25) !important;
+  cursor: pointer !important;
+  outline: none !important;
+  transition:
+    background-color 0.25s ease,
+    background-position 0.28s cubic-bezier(0.34, 1.45, 0.64, 1) !important;
+}
+.lil-gui input[type="checkbox"]:checked {
+  background-color: #2f7cf6 !important;
+  background-position: 16px 0, 16px 0 !important;
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.2),
+    0 0 12px rgba(47, 124, 246, 0.45) !important;
+}
+.lil-gui input[type="checkbox"]::before { content: none !important; }
+
+/* ===== Control Bar: lay the active folder out across the wide panel ===== */
+/* The tab rail already names the folder, so drop its in-panel title and the
+   nested card chrome, then flow controllers into balanced columns. */
+.gui-scroll .lil-root > .lil-children > .lil-gui > .lil-title {
+  display: none !important;
+}
+.gui-scroll .lil-root > .lil-children > .lil-gui > .lil-children {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  column-count: 2;
+  column-gap: 26px;
+}
+.gui-scroll .lil-root > .lil-children > .lil-gui > .lil-children::before {
+  display: none !important;
+}
+/* Keep each controller intact within its column. */
+.gui-scroll .lil-controller {
+  break-inside: avoid;
+}
+
+/* --- sectioned tabs (e.g. Petal Geometry: Width Profile + Petal Shape) --- */
+/* When a tab groups its controls into sub-sections, stack the sections and
+   give each a small, non-collapsible heading instead of a collapsible card. */
+.gui-scroll
+  .lil-root
+  > .lil-children
+  > .lil-gui:has(> .lil-children > .lil-gui)
+  > .lil-children {
+  column-count: 1;
+}
+/* Section heading: keep the uppercase label, drop the caret + click-to-fold. */
+.gui-scroll .lil-root > .lil-children > .lil-gui > .lil-children > .lil-gui {
+  margin: 0 0 2px !important;
+}
+.gui-scroll
+  .lil-root
+  > .lil-children
+  > .lil-gui
+  > .lil-children
+  > .lil-gui
+  > .lil-title {
+  display: block !important;
+  pointer-events: none !important;
+  padding: 4px 6px 8px !important;
+}
+.gui-scroll
+  .lil-root
+  > .lil-children
+  > .lil-gui
+  > .lil-children
+  > .lil-gui
+  > .lil-title:before {
+  content: none !important;
+}
+/* Section body: flat (no card) and laid out in the same two columns. */
+.gui-scroll
+  .lil-root
+  > .lil-children
+  > .lil-gui
+  > .lil-children
+  > .lil-gui
+  > .lil-children {
+  margin: 0 0 10px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  column-count: 2;
+  column-gap: 26px;
+}
+.gui-scroll
+  .lil-root
+  > .lil-children
+  > .lil-gui
+  > .lil-children
+  > .lil-gui
+  > .lil-children::before {
+  display: none !important;
+}
