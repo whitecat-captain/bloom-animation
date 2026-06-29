@@ -1,0 +1,97 @@
+<svg width="680" height="1209" viewBox="0 0 680 1209" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>一朵花绽放的代码施工图（竖屏总览）</title>
+<desc>竖屏 9:16 单张总览：五层施工流水线，每层附真实公式与 /social 可调参数，汇入上色渲染，底部标注一次调参的数据流链路。</desc>
+<style>
+  text{font-family:system-ui,-apple-system,"PingFang SC","Segoe UI",sans-serif}
+  .th{font-size:14px;font-weight:500;fill:#2C2C2A}
+  .ts{font-size:12px;font-weight:400;fill:#5F5E5A}
+  .mono{font-family:ui-monospace,Menlo,Consolas,"Courier New",monospace}
+  rect{stroke-width:1}
+  .box{fill:#FBFAF7;stroke:#D3D1C7}
+  .arr{stroke:#888780;stroke-width:1.5;fill:none}
+  .g-teal rect{fill:#E1F5EE;stroke:#0F6E56}
+  .g-teal .th{fill:#085041}.g-teal .ts{fill:#0F6E56}
+  .g-coral rect{fill:#FAECE7;stroke:#993C1D}
+  .g-coral .th{fill:#712B13}.g-coral .ts{fill:#993C1D}
+  .g-gray rect{fill:#F1EFE8;stroke:#5F5E5A}
+  .g-gray .th{fill:#444441}.g-gray .ts{fill:#5F5E5A}
+  .g-purple rect{fill:#EEEDFE;stroke:#534AB7}
+  .g-purple .ts{fill:#3C3489}
+</style>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+<rect x="0" y="0" width="680" height="1209" fill="#FAF9F6" stroke="none"/>
+
+<line class="arr" x1="340" y1="140" x2="340" y2="160" marker-end="url(#arrow)"/>
+<line class="arr" x1="340" y1="296" x2="340" y2="316" marker-end="url(#arrow)"/>
+<line class="arr" x1="340" y1="452" x2="340" y2="472" marker-end="url(#arrow)"/>
+<line class="arr" x1="340" y1="608" x2="340" y2="628" marker-end="url(#arrow)"/>
+<line class="arr" x1="340" y1="764" x2="340" y2="784" marker-end="url(#arrow)"/>
+<line class="arr" x1="340" y1="920" x2="340" y2="940" marker-end="url(#arrow)"/>
+<line class="arr" x1="340" y1="1076" x2="340" y2="1088" marker-end="url(#arrow)"/>
+
+<rect class="box" x="40" y="40" width="600" height="98" rx="12"/>
+<text class="th" x="64" y="76">一朵花绽放 · 代码施工图</text>
+<text class="ts" x="64" y="100">没有花瓣模型 · 一张网格 · 一段着色器 · 一个数字</text>
+<text class="ts mono" x="64" y="124">5 层 · 1 InstancedMesh · 1 draw call · 36 瓣 · 0 模型文件</text>
+
+<g class="g-teal"><rect x="40" y="162" width="600" height="132" rx="12"/>
+<text class="th" x="64" y="194">① 单片花瓣 = 平面 + 着色器</text>
+<text class="ts" x="64" y="216">脊柱积分曲率，把平面卷成花瓣 —— 没有花瓣模型</text>
+<text class="ts mono" x="68" y="254">for s in 0..1:  curl = mix(curlClosed, curlOpen, openness)</text>
+<text class="ts mono" x="68" y="274">ang += curl · density · ds ;  spine += (cos, sin) · ds</text></g>
+<g class="g-purple"><rect x="440" y="176" width="184" height="30" rx="15"/>
+<text class="ts" x="532" y="195" text-anchor="middle">curl 0–2 · 宽度型</text></g>
+
+<g class="g-teal"><rect x="40" y="318" width="600" height="132" rx="12"/>
+<text class="th" x="64" y="350">② 叶序螺旋 = 黄金角 137.5°</text>
+<text class="ts" x="64" y="372">幂律半径 / 高度，把花瓣绕成穹顶螺旋</text>
+<text class="ts mono" x="68" y="410">a = i · 137.5°    无理角，永不排成辐条</text>
+<text class="ts mono" x="68" y="430">r = R · u^kr ,  y = H · u^kh   →  穹顶</text></g>
+<g class="g-purple"><rect x="440" y="332" width="184" height="30" rx="15"/>
+<text class="ts" x="532" y="351" text-anchor="middle">角 137.5° · 瓣 1–220</text></g>
+
+<g class="g-coral"><rect x="40" y="474" width="600" height="132" rx="12"/>
+<text class="th" x="64" y="506">③ 绽放波前 = 一个数字 0→1   ★</text>
+<text class="ts" x="64" y="528">一个数延迟成波，外圈先开、花心后开（动画核心）</text>
+<text class="ts mono" x="68" y="566">order = 1 - aU ;  front = mix(-w, 1, bloom)</text>
+<text class="ts mono" x="68" y="586">bloomLocal = 1 - clamp((order - front) / w, 0, 1)</text></g>
+<g class="g-purple"><rect x="440" y="488" width="184" height="30" rx="15"/>
+<text class="ts" x="532" y="507" text-anchor="middle">bloom 0–1 · 波前宽</text></g>
+
+<g class="g-teal"><rect x="40" y="630" width="600" height="132" rx="12"/>
+<text class="th" x="64" y="662">④ 实例化 = 一次 draw call</text>
+<text class="ts" x="64" y="684">同一几何复制 n 份，GPU 一次画完</text>
+<text class="ts mono" x="68" y="722">new InstancedMesh(geo, mat, n)</text>
+<text class="ts mono" x="68" y="742">aU · aSeed · aTilt   →   1 draw call</text></g>
+<g class="g-purple"><rect x="440" y="644" width="184" height="30" rx="15"/>
+<text class="ts" x="532" y="663" text-anchor="middle">实例数 1–150</text></g>
+
+<g class="g-coral"><rect x="40" y="786" width="600" height="132" rx="12"/>
+<text class="th" x="64" y="818">⑤ 风 &amp; 噪声 = value-noise</text>
+<text class="ts" x="64" y="840">噪声打破完美对称，每片按种子独立摆动</text>
+<text class="ts mono" x="68" y="878">gust = turb(t · .13, aSeed · .31)</text>
+<text class="ts mono" x="68" y="898">dx = windAmp · bloomLocal · uv.y^2 · wave</text></g>
+<g class="g-purple"><rect x="440" y="800" width="184" height="30" rx="15"/>
+<text class="ts" x="532" y="819" text-anchor="middle">风力 / 风速 0–3</text></g>
+
+<g class="g-gray"><rect x="40" y="942" width="600" height="132" rx="12"/>
+<text class="th" x="64" y="974">上色 + 渲染 → 输出一帧</text>
+<text class="ts" x="64" y="996">按位置冷暖渐变，纯黑背景，扁平色调</text>
+<text class="ts mono" x="68" y="1034">closeness = (1-uv.y) · .7 + (1-aU) · .3</text>
+<text class="ts mono" x="68" y="1054">col = ramp(closeness)   冷蓝 → 暖橙</text></g>
+
+<rect class="box" x="40" y="1090" width="600" height="76" rx="12"/>
+<text class="th" x="64" y="1116">数据流 · 一次调参的链路</text>
+<text class="ts mono" x="68" y="1140">布局参数(角度·瓣数·半径) → buildFlower() 重建几何</text>
+<text class="ts mono" x="68" y="1160">形状·绽放·风 → 改 uniform → 顶点着色器逐帧重算</text>
+
+<rect x="92" y="1182" width="12" height="12" rx="3" fill="#1D9E75" stroke="none"/>
+<text class="ts" x="110" y="1192">结构 / 几何</text>
+<rect x="232" y="1182" width="12" height="12" rx="3" fill="#D85A30" stroke="none"/>
+<text class="ts" x="250" y="1192">动画 / 运动</text>
+<rect x="372" y="1182" width="12" height="12" rx="3" fill="#7F77DD" stroke="none"/>
+<text class="ts" x="390" y="1192">可调参数</text>
+<rect x="486" y="1182" width="12" height="12" rx="3" fill="#888780" stroke="none"/>
+<text class="ts" x="504" y="1192">输出 / 渲染</text>
+</svg>

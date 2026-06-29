@@ -12,11 +12,10 @@ export default function FlowerCanvas() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const guiRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
-  const railNoRef = useRef<HTMLSpanElement>(null);
   const sceneRef = useRef<FlowerSceneApi | null>(null);
   const [open, setOpen] = useState(false);
 
-  useFlowerSceneScroll({ rootRef, canvasRef, guiRef, tabsRef, railNoRef, sceneRef });
+  useFlowerSceneScroll({ rootRef, canvasRef, guiRef, tabsRef, sceneRef });
   const showFullDesignCta = useDesignCtaVisibility(rootRef);
 
   return (
@@ -28,7 +27,6 @@ export default function FlowerCanvas() {
         canvasRef={canvasRef}
         guiRef={guiRef}
         tabsRef={tabsRef}
-        railNoRef={railNoRef}
         open={open}
         showFullDesignCta={showFullDesignCta}
         steps={FLOWER_STEPS}

@@ -5,7 +5,6 @@ type FlowerStoryProps = {
   canvasRef: RefObject<HTMLDivElement | null>;
   guiRef: RefObject<HTMLDivElement | null>;
   tabsRef: RefObject<HTMLDivElement | null>;
-  railNoRef: RefObject<HTMLSpanElement | null>;
   open: boolean;
   showFullDesignCta: boolean;
   steps: FlowerStep[];
@@ -18,7 +17,6 @@ export function FlowerStory({
   canvasRef,
   guiRef,
   tabsRef,
-  railNoRef,
   open,
   showFullDesignCta,
   steps,
@@ -32,15 +30,6 @@ export function FlowerStory({
         ref={canvasRef}
         className={`canvas-container${open ? " pushed" : ""}`}
       />
-
-      <aside className="rail" aria-hidden="true">
-        <span className="rail-no">
-          <span ref={railNoRef}>00</span>&thinsp;/&thinsp;05
-        </span>
-        <span className="rail-track">
-          <span className="rail-fill" />
-        </span>
-      </aside>
 
       <main className="story">
         <section className="hero-section" data-step="00">
@@ -73,17 +62,10 @@ export function FlowerStory({
                 grows out of <em>pure math</em>.
               </span>
             </h1>
-            <p className="hero-deck">
-              A procedural botanical essay in one living shader.
-            </p>
             <div className="hero-folio" aria-hidden="true">
               <span>Field notes</span>
               <span>Geometry / motion / light</span>
             </div>
-          </div>
-          <div className="scroll-cue">
-            <span>scroll to bloom</span>
-            <i />
           </div>
         </section>
 

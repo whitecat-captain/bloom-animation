@@ -85,35 +85,6 @@
   outline: none;
 }
 
-/* ===== Fixed chrome: progress rail ===== */
-.rail {
-  position: fixed;
-  left: 30px; bottom: 28px;
-  z-index: 5;
-  pointer-events: none;
-  display: flex; flex-direction: column; align-items: flex-start; gap: 12px;
-  font-family: 'Outfit', sans-serif;
-}
-.rail-no {
-  font-size: 11px; font-weight: 500; letter-spacing: 0.2em;
-  color: rgba(255, 255, 255, 0.55);
-  font-variant-numeric: tabular-nums;
-}
-.rail-track {
-  display: block;
-  width: 1.5px; height: 92px;
-  background: rgba(255, 255, 255, 0.14);
-  border-radius: 1px;
-  overflow: hidden;
-}
-.rail-fill {
-  display: block;
-  width: 100%; height: 100%;
-  background: linear-gradient(180deg, #ffb16e, #ff5a2e);
-  transform: scaleY(0);
-  transform-origin: top;
-}
-
 /* ===== Scroll story ===== */
 .story {
   position: relative;
@@ -121,7 +92,6 @@
   pointer-events: none; /* canvas below keeps drag-to-orbit; cards re-enable */
 }
 .app-container.designer-open .story,
-.app-container.designer-open .rail,
 .app-container.designer-open .cta-design,
 .app-container.designer-open .finale-actions {
   opacity: 0 !important;
@@ -244,18 +214,6 @@
   font-style: italic;
   color: #fff;
 }
-.hero-deck {
-  grid-column: 2;
-  grid-row: 3;
-  width: min(430px, 100%);
-  margin: 0;
-  padding: 0 0 26px 80px;
-  font-family: 'Inter', system-ui, sans-serif;
-  font-size: 15px;
-  font-weight: 300;
-  line-height: 1.7;
-  color: rgba(255, 255, 255, 0.66);
-}
 @media (max-width: 980px) {
   .hero-magazine {
     grid-template-columns: 138px minmax(0, 1fr) 140px;
@@ -279,9 +237,6 @@
   }
   .hero-line:nth-child(2) { padding-left: 22px; }
   .hero-line:nth-child(3) { padding-left: 42px; }
-  .hero-deck {
-    padding-left: 42px;
-  }
 }
 @media (max-width: 760px) {
   .hero-section {
@@ -318,32 +273,6 @@
   }
   .hero-line:nth-child(2) { padding-left: 16px; }
   .hero-line:nth-child(3) { padding-left: 0; }
-  .hero-deck {
-    width: min(320px, 100%);
-    padding: 20px 0 88px 16px;
-    font-size: 14px;
-  }
-}
-.scroll-cue {
-  position: absolute;
-  bottom: 36px; left: 50%;
-  transform: translateX(-50%);
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
-  font-family: 'Outfit', sans-serif;
-  font-size: 10px; font-weight: 400;
-  letter-spacing: 0.3em; text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.4);
-}
-.scroll-cue i {
-  width: 1px; height: 44px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), transparent);
-  animation: cue-drop 2.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
-}
-@keyframes cue-drop {
-  0% { transform: scaleY(0); transform-origin: top; }
-  45% { transform: scaleY(1); transform-origin: top; }
-  55% { transform: scaleY(1); transform-origin: bottom; }
-  100% { transform: scaleY(0); transform-origin: bottom; }
 }
 
 /* --- explainer steps --- */
@@ -900,7 +829,6 @@
   .gui-scroll .lil-controller.lil-number .lil-slider { height: 24px !important; }
   .gui-scroll { padding: 2px 2px 0 0; }
   .settings-btn { top: 18px; right: 18px; }
-  .rail { display: none; }
   .step { padding: 0 18px; justify-content: center; }
   .step--right { justify-content: center; }
 }

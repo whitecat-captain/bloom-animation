@@ -10,7 +10,6 @@ type FlowerSceneScrollRefs = {
   canvasRef: RefObject<HTMLDivElement | null>;
   guiRef: RefObject<HTMLDivElement | null>;
   tabsRef: RefObject<HTMLDivElement | null>;
-  railNoRef: RefObject<HTMLSpanElement | null>;
   sceneRef: RefObject<FlowerSceneApi | null>;
 };
 
@@ -19,7 +18,6 @@ export function useFlowerSceneScroll({
   canvasRef,
   guiRef,
   tabsRef,
-  railNoRef,
   sceneRef,
 }: FlowerSceneScrollRefs) {
   useEffect(() => {
@@ -81,8 +79,7 @@ export function useFlowerSceneScroll({
           duration: 1.0,
           stagger: 0.14,
           delay: 0.2,
-        })
-        .from(".scroll-cue, .rail", { opacity: 0, duration: 0.8 }, "-=0.4");
+        });
 
       const proxy = { bloom: 0.04, rot: 0 };
       const apply = () => {
@@ -156,29 +153,6 @@ export function useFlowerSceneScroll({
         },
       });
 
-      gsap.to(".rail-fill", {
-        scaleY: 1,
-        ease: "none",
-        scrollTrigger: {
-          trigger: ".story",
-          start: "top top",
-          end: "bottom bottom",
-          scrub: true,
-        },
-      });
-      gsap.utils.toArray<HTMLElement>("[data-step]").forEach((sec) => {
-        const label = sec.dataset.step!;
-        ScrollTrigger.create({
-          trigger: sec,
-          start: "top 55%",
-          end: "bottom 55%",
-          onToggle: (self) => {
-            if (self.isActive && railNoRef.current) {
-              railNoRef.current.textContent = label;
-            }
-          },
-        });
-      });
     }, rootRef);
 
     computeSnapPoints();
@@ -263,5 +237,5 @@ export function useFlowerSceneScroll({
       scene.dispose();
       sceneRef.current = null;
     };
-  }, [canvasRef, guiRef, tabsRef, railNoRef, rootRef, sceneRef]);
+  }, [canvasRef, guiRef, tabsRef, rootRef, sceneRef]);
 }
