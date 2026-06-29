@@ -2,6 +2,10 @@
 
 A Next.js 16 / React 19 WebGL study in procedural botany. The page is one interactive flower story: GSAP drives scroll, Three.js renders the flower, and lil-gui exposes the design controls.
 
+**🌸 [View the live demo →](https://bloom-animation-mu.vercel.app)**
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Open-ff69b4?style=for-the-badge&logo=vercel)](https://bloom-animation-mu.vercel.app)
+
 ## Acknowledgments
 
 This project was built entirely by following the approach and ideas of **Danny Laursen**.
