@@ -328,7 +328,13 @@ void main() {
   const width = canvasContainer.clientWidth;
   const height = canvasContainer.clientHeight;
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  // preserveDrawingBuffer keeps the rendered frame readable by canvas.toBlob()
+  // / readPixels after compositing — required by the studio PNG exporters.
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    alpha: true,
+    preserveDrawingBuffer: true,
+  });
   renderer.setSize(width, height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   canvasContainer.appendChild(renderer.domElement);
@@ -522,6 +528,15 @@ void main() {
     syncTarget();
   };
 
+  // Seconds the bud -> full-open animation takes, and the eased curve it follows.
+  // Shared by the GUI auto/play loops and the studio export timeline so a
+  // recorded bloom matches what the user previews.
+  const BLOOM_DURATION_S = 5;
+  const easedBloom = (progress01: number) => {
+    const x = 1 - Math.pow(1 - THREE.MathUtils.clamp(progress01, 0, 1), 3.2);
+    return 0.04 + (params.bloomMax - 0.04) * x;
+  };
+
   // Resets every controller (recursively) back to its initial default value;
   // each onChange re-applies uniforms / rebuilds the flower as needed.
   const resetCtrl = gui
@@ -688,7 +703,9 @@ void main() {
   window.addEventListener("resize", onResize);
 
   const clock = new THREE.Clock();
-  renderer.setAnimationLoop(() => {
+  // The live render loop, kept as a named fn so the export pipeline can pause it
+  // (renderFrame drives the canvas deterministically) and resume it afterwards.
+  const renderLoop = () => {
     if (pendingResize) {
       const { w, h } = pendingResize;
       camera.aspect = w / h;
@@ -699,21 +716,21 @@ void main() {
     uniforms.uTime.value = clock.getElapsedTime();
     if (params.animate) {
       const t = clock.getElapsedTime() % 11;
-      let x = Math.min(Math.max(t / 5, 0), 1);
-      x = 1 - Math.pow(1 - x, 3.2);
-      params.bloom = 0.04 + (params.bloomMax - 0.04) * x;
+      params.bloom = easedBloom(t / BLOOM_DURATION_S);
       applyBloom(params.bloom);
     } else if (playStart !== null) {
       const t = clock.getElapsedTime() - playStart;
-      let x = Math.min(Math.max(t / 5, 0), 1);
-      x = 1 - Math.pow(1 - x, 3.2);
-      params.bloom = 0.04 + (params.bloomMax - 0.04) * x;
+      params.bloom = easedBloom(t / BLOOM_DURATION_S);
       applyBloom(params.bloom);
-      if (t >= 5) playStart = null;
+      if (t >= BLOOM_DURATION_S) playStart = null;
     }
     controls.update();
     renderer.render(scene, camera);
-  });
+  };
+  renderer.setAnimationLoop(renderLoop);
+
+  // Off-DOM size used to restore the renderer after a fixed-resolution export.
+  let savedSize: { w: number; h: number } | null = null;
 
   return {
     /** Scroll-driven bloom; ignored while the GUI's Auto-Animate loop owns it. */
@@ -852,6 +869,74 @@ void main() {
       buildStem();
     },
     bloomMax: params.bloomMax,
+    /** Seconds the bud -> full-open bloom takes; the export timeline reuses it. */
+    bloomDuration: BLOOM_DURATION_S,
+
+    // ===== Studio export surface =====
+    /** The WebGL canvas — used for captureStream() and toBlob(). */
+    getCanvas(): HTMLCanvasElement {
+      return renderer.domElement;
+    },
+    getRenderer() {
+      return renderer;
+    },
+    getCamera() {
+      return camera;
+    },
+    /**
+     * Transparent (clear alpha 0, for PNG/WebM alpha assets) or an opaque solid
+     * fill behind the flower. The renderer is already alpha-capable.
+     */
+    setBackground(bg: { mode: "transparent" } | { mode: "solid"; color: string }) {
+      if (bg.mode === "solid") renderer.setClearColor(new THREE.Color(bg.color), 1);
+      else renderer.setClearColor(0x000000, 0);
+    },
+    /** Stop the live loop so the export pipeline can drive frames deterministically. */
+    pauseLoop() {
+      renderer.setAnimationLoop(null);
+    },
+    /** Resume the live loop after an export. */
+    resumeLoop() {
+      renderer.setAnimationLoop(renderLoop);
+    },
+    /**
+     * Deterministic single render at an explicit wind time + bloom value. The
+     * live loop must be paused first (see pauseLoop). Returns nothing; read the
+     * frame off getCanvas() immediately after.
+     */
+    renderFrame(timeSeconds: number, bloom: number) {
+      uniforms.uTime.value = timeSeconds;
+      applyBloom(bloom);
+      controls.update();
+      renderer.render(scene, camera);
+    },
+    /** Eased bud->open bloom value for a 0..1 progress; matches the live loop. */
+    bloomAt(progress01: number) {
+      return easedBloom(progress01);
+    },
+    /** Resize the renderer to a fixed export resolution; pair with restoreSize(). */
+    setExportSize(w: number, h: number) {
+      if (!savedSize) {
+        savedSize = {
+          w: renderer.domElement.width / renderer.getPixelRatio(),
+          h: renderer.domElement.height / renderer.getPixelRatio(),
+        };
+      }
+      renderer.setPixelRatio(1);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h, true);
+    },
+    /** Restore the renderer to its on-screen size after an export. */
+    restoreSize() {
+      const w = canvasContainer.clientWidth || savedSize?.w || 1;
+      const h = canvasContainer.clientHeight || savedSize?.h || 1;
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h, true);
+      savedSize = null;
+    },
     dispose() {
       renderer.setAnimationLoop(null);
       ro.disconnect();

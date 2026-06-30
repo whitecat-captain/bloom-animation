@@ -1,0 +1,407 @@
+/* Flower Studio — focused full-screen customizer + export tool.
+   Reuses the liquid-glass utilities, lil-gui theme and bottom .gui-container
+   panel from flower.css; this file adds the stage + export panel chrome. */
+
+.studio {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+  background: #05070f;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  /* Bottom designer panel geometry — flower.css's .gui-container reads these. */
+  --panel-h: 272px;
+  --panel-gap: 28px;
+}
+
+/* Fixed full-viewport WebGL stage. The engine appends its canvas here. */
+.studio-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  background: #05070f;
+}
+.studio-stage canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  outline: none;
+}
+/* Transparent mode: checkerboard shows through the alpha-cleared canvas. */
+.studio-stage.is-transparent {
+  background-color: #1b1d24;
+  background-image:
+    linear-gradient(45deg, #2c2f3a 25%, transparent 25%),
+    linear-gradient(-45deg, #2c2f3a 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #2c2f3a 75%),
+    linear-gradient(-45deg, transparent 75%, #2c2f3a 75%);
+  background-size: 24px 24px;
+  background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+}
+
+/* --- top-left wordmark --- */
+.studio-head {
+  position: fixed;
+  top: 26px;
+  left: 28px;
+  z-index: 12;
+  pointer-events: none;
+}
+.studio-title {
+  margin: 0;
+  font-family: "Outfit", "Inter", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.95);
+}
+.studio-sub {
+  margin: 4px 0 0;
+  font-size: 11.5px;
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* --- export panel (top-right) --- */
+.studio-export {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 14;
+  width: 300px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.9);
+}
+.studio-export-title {
+  margin: 0;
+  font-family: "Outfit", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* grouped export sections (Image Export / Video Export) */
+.studio-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.studio-section-title {
+  margin: 0;
+  font-family: "Outfit", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.studio-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.studio-label {
+  font-family: "Outfit", sans-serif;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+.studio-label em {
+  font-style: normal;
+  float: right;
+  color: #8fd3ff;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* segmented control (background mode, format) */
+.studio-seg {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.studio-seg-btn {
+  flex: 1 1 auto;
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  padding: 7px 6px;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: "Outfit", sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+.studio-seg-btn:hover {
+  color: #fff;
+}
+.studio-seg-btn.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.studio-bg-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.studio-bg-row .studio-seg {
+  flex: 1 1 auto;
+}
+.studio-color {
+  flex: 0 0 40px;
+  width: 40px;
+  height: auto;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+}
+.studio-color:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.studio-color::-webkit-color-swatch-wrapper {
+  padding: 3px;
+}
+.studio-color::-webkit-color-swatch {
+  border: none;
+  border-radius: 7px;
+}
+
+/* preset chips */
+.studio-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.studio-chip {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.72);
+  font-family: "Outfit", sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.studio-chip:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+/* merged timeline bar: play/pause + scrubber + length stepper */
+.studio-timeline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.studio-play {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  color: #fff;
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+.studio-play:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.18);
+}
+.studio-play:active:not(:disabled) {
+  transform: scale(0.94);
+}
+.studio-play:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.studio-play svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+.studio-scrub {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+}
+.studio-scrub::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.16);
+}
+.studio-scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: #8fd3ff;
+  box-shadow: 0 0 10px rgba(143, 211, 255, 0.6);
+}
+.studio-scrub::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.16);
+}
+.studio-scrub::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: #8fd3ff;
+  box-shadow: 0 0 10px rgba(143, 211, 255, 0.6);
+}
+.studio-scrub:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.studio-row {
+  flex-direction: row;
+  gap: 10px;
+}
+.studio-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.studio-mini--grow {
+  flex: 1 1 auto;
+}
+.studio-mini select {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+}
+.studio-mini select option {
+  color: #111;
+}
+
+.studio-hint {
+  margin: 0;
+  font-size: 10.5px;
+  font-weight: 300;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.42);
+}
+.studio-hint code {
+  display: block;
+  margin-top: 6px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  font-family: "SF Mono", "Menlo", monospace;
+  font-size: 10px;
+  line-height: 1.5;
+  color: #8fd3ff;
+  background: rgba(143, 211, 255, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(143, 211, 255, 0.12);
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: all;
+}
+
+/* export button + progress */
+.studio-export-btn {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  margin-top: 2px;
+  padding: 13px 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #2f7cf6, #6b46ff);
+  color: #fff;
+  font-family: "Outfit", sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  box-shadow: 0 8px 22px rgba(47, 124, 246, 0.35);
+  transition: transform 0.16s ease, filter 0.16s ease, opacity 0.16s ease;
+}
+.studio-export-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+.studio-export-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+.studio-export-btn:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+.studio-progress {
+  height: 4px;
+  border-radius: 99px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+}
+.studio-progress span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #2f7cf6, #6b46ff);
+  transition: width 0.12s linear;
+}
+
+@media (max-width: 760px) {
+  .studio {
+    --panel-h: 42vh;
+    --panel-gap: 12px;
+  }
+  .studio-export {
+    top: auto;
+    bottom: calc(var(--panel-h) + var(--panel-gap) + 14px);
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-height: 44vh;
+  }
+  .studio-head {
+    top: 16px;
+    left: 16px;
+  }
+}
