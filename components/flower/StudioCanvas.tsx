@@ -2,7 +2,11 @@
 
 import { Mouse, Move, Rotate3D } from "lucide-react";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
-import { createFlowerScene, type FlowerSceneApi } from "./flowerScene";
+import {
+  createFlowerScene,
+  type FlowerSceneApi,
+  type PetalShapeState,
+} from "./flowerScene";
 import {
   downloadBlob,
   exportPngSequence,
@@ -10,6 +14,7 @@ import {
   recordVideo,
   type Background,
 } from "./flowerExport";
+import PetalShapePreview from "./PetalShapePreview";
 import {
   PanelButton,
   PanelActionRow,
@@ -40,6 +45,19 @@ const BG_OPTIONS: { label: string; value: BgMode }[] = [
   { label: "Solid", value: "solid" },
   { label: "Transparent", value: "transparent" },
 ];
+const DEFAULT_PETAL_SHAPE: PetalShapeState = {
+  petalLen: 0.95,
+  w0: 0.16,
+  w1: 0.28,
+  w2: 0.3,
+  w3: 0.2,
+  curlOpen: -0.35,
+  curlBias: 2.3,
+  cup: 0.4,
+  sideCurl: 0.45,
+  waveAmp: 0.035,
+  asym: 0.08,
+};
 
 // Palette-only starter looks (5 stops, cold rim -> hot core), applied instantly
 // via scene.setPalette without rebuilding the mesh.
@@ -250,6 +268,8 @@ export default function StudioCanvas() {
   const [imageRes, setImageRes] = useState(DEFAULT_RES);
   const [videoRes, setVideoRes] = useState(DEFAULT_RES);
   const [showCameraFrame, setShowCameraFrame] = useState(false);
+  const [activeDesignTab, setActiveDesignTab] = useState("Petal Geometry");
+  const [petalShape, setPetalShape] = useState<PetalShapeState>(DEFAULT_PETAL_SHAPE);
   const [exporting, setExporting] = useState(false);
   const [exportKind, setExportKind] = useState<"image" | "video" | null>(null);
   const [progress, setProgress] = useState(0);
@@ -324,6 +344,10 @@ export default function StudioCanvas() {
       canvasRef.current,
       guiRef.current,
       tabsRef.current,
+      {
+        onActiveDesignTabChange: setActiveDesignTab,
+        onPetalShapeChange: setPetalShape,
+      },
     );
     sceneRef.current = scene;
     scene.setWheelZoomEnabled(true);
@@ -506,7 +530,12 @@ export default function StudioCanvas() {
       {/* Parameter designer — the engine mounts its tabbed lil-gui here. */}
       <div className="gui-container liquid-glass-strong">
         <div ref={tabsRef} className="gui-tabs" />
-        <div ref={guiRef} className="gui-scroll" />
+        <div className="studio-design-panel-main">
+          {activeDesignTab === "Petal Geometry" && (
+            <PetalShapePreview shape={petalShape} />
+          )}
+          <div ref={guiRef} className="gui-scroll" />
+        </div>
       </div>
 
       {/* Export panel — end-credits theme (cream ground, blue mono type) */}

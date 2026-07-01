@@ -4,6 +4,25 @@ import GUI from "lil-gui";
 
 const MAX_LAYOUT_PETALS = 150;
 
+export type PetalShapeState = {
+  petalLen: number;
+  w0: number;
+  w1: number;
+  w2: number;
+  w3: number;
+  curlOpen: number;
+  curlBias: number;
+  cup: number;
+  sideCurl: number;
+  waveAmp: number;
+  asym: number;
+};
+
+type FlowerSceneOptions = {
+  onPetalShapeChange?: (shape: PetalShapeState) => void;
+  onActiveDesignTabChange?: (title: string) => void;
+};
+
 /**
  * Boots the phyllotaxis flower scene + lil-gui into the given containers.
  * Returns a cleanup function that tears down Three.js, the GUI and listeners.
@@ -12,6 +31,7 @@ export function createFlowerScene(
   canvasContainer: HTMLElement,
   guiContainer: HTMLElement,
   tabsContainer?: HTMLElement | null,
+  options: FlowerSceneOptions = {},
 ) {
   const params = {
     // ===== Phyllotaxis =====
@@ -113,6 +133,23 @@ export function createFlowerScene(
     rampTex.needsUpdate = true;
   }
   bakeRamps();
+
+  const petalShapeState = (): PetalShapeState => ({
+    petalLen: params.petalLen,
+    w0: params.w0,
+    w1: params.w1,
+    w2: params.w2,
+    w3: params.w3,
+    curlOpen: params.curlOpen,
+    curlBias: params.curlBias,
+    cup: params.cup,
+    sideCurl: params.sideCurl,
+    waveAmp: params.waveAmp,
+    asym: params.asym,
+  });
+  const notifyPetalShapeChange = () => {
+    options.onPetalShapeChange?.(petalShapeState());
+  };
 
   const uniforms = {
     uRamps: { value: rampTex },
@@ -528,6 +565,14 @@ void main() {
   const U = (name: keyof typeof uniforms) => (v: number) => {
     uniforms[name].value = v;
   };
+  const shapeU = (name: keyof typeof uniforms) => (v: number) => {
+    uniforms[name].value = v;
+    notifyPetalShapeChange();
+  };
+  const shapeBake = () => {
+    bakeRamps();
+    notifyPetalShapeChange();
+  };
   const applyBloom = (v: number) => {
     uniforms.uBloom.value = v;
     const range = Math.max(params.bloomMax - 0.04, 0.001);
@@ -554,21 +599,21 @@ void main() {
 
   // Petal Shape: the flat outline + size of a single petal.
   const fShape = fPetal.addFolder("Petal Shape");
-  fShape.add(params, "petalLen", 0.3, 1.5).name("Petal Length").onChange(U("uLength"));
-  fShape.add(params, "w0", 0, 0.6).name("Base Width").onChange(bakeRamps);
-  fShape.add(params, "w1", 0, 0.6).name("Lower Width").onChange(bakeRamps);
-  fShape.add(params, "w2", 0, 0.6).name("Upper Width").onChange(bakeRamps);
-  fShape.add(params, "w3", 0, 0.6).name("Tip Width").onChange(bakeRamps);
+  fShape.add(params, "petalLen", 0.3, 1.5).name("Petal Length").onChange(shapeU("uLength"));
+  fShape.add(params, "w0", 0, 0.6).name("Base Width").onChange(shapeBake);
+  fShape.add(params, "w1", 0, 0.6).name("Lower Width").onChange(shapeBake);
+  fShape.add(params, "w2", 0, 0.6).name("Upper Width").onChange(shapeBake);
+  fShape.add(params, "w3", 0, 0.6).name("Tip Width").onChange(shapeBake);
 
   // Transform: how that flat petal curls and bends in 3D.
   const fTransform = fPetal.addFolder("Transform");
   fTransform.add(params, "curlClosed", 0, 4).name("Curl (Closed)").onChange(U("uCurlClosed"));
-  fTransform.add(params, "curlOpen", -1.5, 1).name("Curl (Open)").onChange(U("uCurlOpen"));
-  fTransform.add(params, "curlBias", 0.3, 4).name("Curl Concentration").onChange(bakeRamps);
-  fTransform.add(params, "cup", 0, 1.5).name("Cup Arch").onChange(U("uCup"));
-  fTransform.add(params, "sideCurl", -3, 3).name("Transverse Curl").onChange(U("uSideCurl"));
-  fTransform.add(params, "waveAmp", 0, 0.08).name("Edge Wave Amp").onChange(U("uWaveAmp"));
-  fTransform.add(params, "asym", -0.4, 0.4).name("Asymmetry").onChange(U("uAsym"));
+  fTransform.add(params, "curlOpen", -1.5, 1).name("Curl (Open)").onChange(shapeU("uCurlOpen"));
+  fTransform.add(params, "curlBias", 0.3, 4).name("Curl Concentration").onChange(shapeBake);
+  fTransform.add(params, "cup", 0, 1.5).name("Cup Arch").onChange(shapeU("uCup"));
+  fTransform.add(params, "sideCurl", -3, 3).name("Transverse Curl").onChange(shapeU("uSideCurl"));
+  fTransform.add(params, "waveAmp", 0, 0.08).name("Edge Wave Amp").onChange(shapeU("uWaveAmp"));
+  fTransform.add(params, "asym", -0.4, 0.4).name("Asymmetry").onChange(shapeU("uAsym"));
 
   const fPhy = gui.addFolder("Phyllotaxis Layout");
   const numPetalsCtrl = fPhy
@@ -639,6 +684,9 @@ void main() {
       tabButtons.forEach((btn, i) =>
         btn.classList.toggle("active", i === active),
       );
+      options.onActiveDesignTabChange?.(
+        tabFolders[active]?.$title.textContent ?? "",
+      );
     };
     tabFolders.forEach((folder, i) => {
       const btn = document.createElement("button");
@@ -691,6 +739,8 @@ void main() {
 
     selectTab(0);
   }
+
+  notifyPetalShapeChange();
 
   // ===== resize + render loop =====
   let pendingResize: { w: number; h: number } | null = null;
@@ -814,6 +864,7 @@ void main() {
       const c = THREE.MathUtils.clamp(v, -1.5, 1.2);
       params.curlOpen = c;
       uniforms.uCurlOpen.value = c;
+      notifyPetalShapeChange();
     },
     /** Petal width ramp [w0..w3] — driven by the /demo "Folded petal" card. */
     setPetalWidths([w0, w1, w2, w3]: number[]) {
@@ -822,6 +873,7 @@ void main() {
       params.w2 = w2;
       params.w3 = w3;
       bakeRamps();
+      notifyPetalShapeChange();
     },
     /** Bloom wavefront width — driven by the /demo "Bloom dial" card. */
     setTransition(v: number) {
@@ -840,11 +892,13 @@ void main() {
     setCup(v: number) {
       params.cup = v;
       uniforms.uCup.value = v;
+      notifyPetalShapeChange();
     },
     /** Edge roll (involute "quilled" look of a ball dahlia). Uniform-only. */
     setSideCurl(v: number) {
       params.sideCurl = v;
       uniforms.uSideCurl.value = v;
+      notifyPetalShapeChange();
     },
     /** Flat tone-shading vs. soft Lambert + subsurface lighting. */
     setFlat(on: boolean) {
@@ -872,6 +926,7 @@ void main() {
       bakeRamps();
       syncShapeUniforms();
       buildFlower();
+      notifyPetalShapeChange();
     },
     /** Show/hide the stem + leaves (/demo hides it on the single-petal card). */
     setStemVisible(show: boolean) {
