@@ -305,15 +305,22 @@ void main() {
   float closeness = (1.0 - vUv.y) * 0.7 + (1.0 - vU) * 0.3;
   vec3 col = rampColor(closeness);
 
-  // 3D lighting: smooth Lambert + subsurface translucency. Everything here
-  // fades to nothing as uFlat -> 1, leaving pure flat ramp colour (no shadows).
+  // 3D lighting: soft studio-wrap light + subsurface translucency. The old
+  // single Lambert pass made the realistic mode collapse into dark backfaces;
+  // this keeps dimensional shading while lifting the shadow floor.
   vec3 n = normalize(vNormalW) * (gl_FrontFacing ? 1.0 : -1.0);
-  vec3 ld = normalize(vec3(0.5, 0.8, 0.6));
-  float lit = mix(0.52 + 0.48 * max(dot(n, ld), 0.0), 1.0, uFlat);
-  float trans = max(dot(-n, ld), 0.0);
+  vec3 key = normalize(vec3(0.35, 0.72, 0.62));
+  vec3 fill = normalize(vec3(-0.85, 0.32, -0.28));
+  float keyWrap = clamp((dot(n, key) + 0.48) / 1.48, 0.0, 1.0);
+  float fillWrap = clamp((dot(n, fill) + 0.35) / 1.35, 0.0, 1.0);
+  float rim = pow(1.0 - abs(n.z), 2.2);
+  float lit3d = 0.76 + 0.34 * pow(keyWrap, 0.75) + 0.14 * fillWrap + 0.08 * rim;
+  float lit = mix(lit3d, 1.0, uFlat);
+  float trans = max(dot(-n, key), 0.0);
   vec3 transCol = mix(uCol1, uCol4, closeness);
-  col += transCol * trans * trans * 0.3 * (1.0 - uFlat);
-  if (!gl_FrontFacing) lit *= mix(0.88, 1.0, uFlat);
+  col += transCol * trans * trans * 0.24 * (1.0 - uFlat);
+  col = mix(col, vec3(1.0), (0.035 + 0.045 * rim) * (1.0 - uFlat));
+  if (!gl_FrontFacing) lit *= mix(0.94, 1.0, uFlat);
 
   gl_FragColor = vec4(col * lit, 1.0);
 }`;
