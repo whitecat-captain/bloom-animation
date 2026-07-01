@@ -14,6 +14,7 @@ import {
   recordVideo,
   type Background,
 } from "./flowerExport";
+import PetalOutlineEditor from "./PetalOutlineEditor";
 import PetalShapePreview from "./PetalShapePreview";
 import {
   PanelButton,
@@ -367,6 +368,16 @@ export default function StudioCanvas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bgMode, color]);
 
+  const handlePetalOutlineChange = ({
+    petalLen,
+    widths,
+  }: {
+    petalLen: number;
+    widths: [number, number, number, number];
+  }) => {
+    sceneRef.current?.setPetalOutline(petalLen, widths);
+  };
+
   // Target export size from a resolution height, using the live canvas aspect
   // so framing matches the preview. H.264 needs even dimensions.
   const sizeFor = (h: number) => {
@@ -532,11 +543,18 @@ export default function StudioCanvas() {
         <div ref={tabsRef} className="gui-tabs" />
         <div className="studio-design-panel-main">
           {activeDesignTab === "Petal Geometry" && (
-            <PetalShapePreview
-              shape={petalShape}
-              palette={PRESETS[selectedPreset].stops}
-              onReset={() => sceneRef.current?.resetPetalGeometry()}
-            />
+            <div className="studio-petal-workbench">
+              <PetalOutlineEditor
+                shape={petalShape}
+                palette={PRESETS[selectedPreset].stops}
+                onOutlineChange={handlePetalOutlineChange}
+              />
+              <PetalShapePreview
+                shape={petalShape}
+                palette={PRESETS[selectedPreset].stops}
+                onReset={() => sceneRef.current?.resetPetalGeometry()}
+              />
+            </div>
           )}
           <div ref={guiRef} className="gui-scroll" />
         </div>
