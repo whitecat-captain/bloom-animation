@@ -40,6 +40,59 @@
   background-size: 24px 24px;
   background-position: 0 0, 0 12px, 12px -12px, -12px 0;
 }
+.studio-export-frame {
+  position: fixed;
+  inset: 10px;
+  z-index: 13;
+  pointer-events: none;
+  border: 1px solid rgba(241, 234, 224, 0.36);
+  box-shadow: inset 0 0 0 1px rgba(41, 36, 214, 0.18);
+}
+.studio-export-frame-corner {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-color: rgba(241, 234, 224, 0.72);
+}
+.studio-export-frame-corner.is-top-left {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid;
+  border-left: 2px solid;
+}
+.studio-export-frame-corner.is-top-right {
+  top: -1px;
+  right: -1px;
+  border-top: 2px solid;
+  border-right: 2px solid;
+}
+.studio-export-frame-corner.is-bottom-left {
+  bottom: -1px;
+  left: -1px;
+  border-bottom: 2px solid;
+  border-left: 2px solid;
+}
+.studio-export-frame-corner.is-bottom-right {
+  right: -1px;
+  bottom: -1px;
+  border-right: 2px solid;
+  border-bottom: 2px solid;
+}
+.studio-export-frame-label {
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  padding: 3px 9px 4px;
+  background: rgba(5, 7, 15, 0.72);
+  color: rgba(241, 234, 224, 0.9);
+  font-family: "Space Mono", ui-monospace, "SFMono-Regular", monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+  transform: translate(-50%, -50%);
+}
 
 /* --- top-left wordmark --- */
 .studio-head {
@@ -49,20 +102,17 @@
   z-index: 12;
   pointer-events: none;
 }
+/* Decorative wordmark: same monospace + size as the panel masthead heading,
+   single line, kept light and subtle over the dark scene. */
 .studio-title {
   margin: 0;
-  font-family: "Outfit", "Inter", sans-serif;
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: rgba(255, 255, 255, 0.95);
-}
-.studio-sub {
-  margin: 4px 0 0;
-  font-size: 11.5px;
-  font-weight: 300;
-  letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.45);
+  font-family: "Space Mono", ui-monospace, "SFMono-Regular", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.82);
 }
 
 /* --- export panel (top-right) --- */
@@ -786,6 +836,139 @@
   color: var(--ink);
   background: var(--control-bg);
   box-shadow: inset 0 0 0 1px var(--line);
+}
+
+/* switch controls */
+.studio-export--credits .studio-panel-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 26px;
+  min-width: 64px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--panel-choice-text);
+  box-shadow: none;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  cursor: pointer;
+}
+.studio-export--credits .studio-panel-switch:hover:not(:disabled) {
+  color: var(--ink);
+}
+.studio-export--credits .studio-panel-switch.is-on {
+  background: transparent;
+  color: var(--ink);
+}
+.studio-export--credits .studio-panel-switch:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+.studio-export--credits .studio-panel-switch-track {
+  position: relative;
+  width: 25px;
+  height: 13px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+.studio-export--credits
+  .studio-panel-switch:hover:not(:disabled)
+  .studio-panel-switch-track {
+  border-color: rgba(41, 36, 214, 0.42);
+}
+.studio-export--credits .studio-panel-switch.is-on .studio-panel-switch-track {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+.studio-export--credits .studio-panel-switch-thumb {
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--panel-choice-text);
+  transform: translateY(-50%);
+  transition: left 140ms ease, background 140ms ease;
+}
+.studio-export--credits .studio-panel-switch.is-on .studio-panel-switch-thumb {
+  left: 15px;
+  background: var(--paper);
+}
+
+/* bottom usage footer */
+.studio-export--credits .studio-panel-footer {
+  display: grid;
+  gap: 9px;
+  padding-top: 11px;
+  border-top: 1px solid var(--line);
+}
+.studio-export--credits .studio-frame-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.studio-export--credits .studio-panel-footer-label {
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.studio-export--credits .studio-interaction-guide {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: 0;
+  color: var(--panel-choice-text);
+  font-family: inherit;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.4;
+}
+/* real divider elements sit evenly between the three items */
+.studio-export--credits .studio-interaction-divider {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 12px;
+  background: var(--line);
+}
+.studio-export--credits .studio-interaction-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  white-space: nowrap;
+}
+.studio-export--credits .studio-interaction-input {
+  color: var(--panel-choice-text);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.studio-export--credits .studio-interaction-item b {
+  color: var(--ink);
+  font-size: 9px;
+  font-weight: 700;
+}
+.studio-export--credits .studio-interaction-icon {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 10px;
+  color: var(--ink-soft);
+  stroke-width: 2;
 }
 
 /* primary export buttons */

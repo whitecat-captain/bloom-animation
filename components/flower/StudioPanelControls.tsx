@@ -162,6 +162,37 @@ export function PanelSelect<T extends string | number>({
   );
 }
 
+export function PanelSwitch({
+  checked,
+  onChange,
+  onLabel = "On",
+  offLabel = "Off",
+  disabled = false,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  onLabel?: string;
+  offLabel?: string;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      className={cx("studio-panel-switch", checked && "is-on")}
+      aria-pressed={checked}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+    >
+      <span className="studio-panel-switch-track" aria-hidden="true">
+        <span className="studio-panel-switch-thumb" />
+      </span>
+      <span className="studio-panel-switch-label">
+        {checked ? onLabel : offLabel}
+      </span>
+    </button>
+  );
+}
+
 export function PanelButton({
   children,
   className,

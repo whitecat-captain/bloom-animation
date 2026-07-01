@@ -1,5 +1,6 @@
 "use client";
 
+import { Mouse, Move, Rotate3D } from "lucide-react";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { createFlowerScene, type FlowerSceneApi } from "./flowerScene";
 import {
@@ -17,6 +18,7 @@ import {
   PanelSection,
   PanelSegmented,
   PanelSelect,
+  PanelSwitch,
 } from "./StudioPanelControls";
 
 type BgMode = "transparent" | "solid";
@@ -247,6 +249,7 @@ export default function StudioCanvas() {
   const [duration, setDuration] = useState(5);
   const [imageRes, setImageRes] = useState(DEFAULT_RES);
   const [videoRes, setVideoRes] = useState(DEFAULT_RES);
+  const [showCameraFrame, setShowCameraFrame] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportKind, setExportKind] = useState<"image" | "video" | null>(null);
   const [progress, setProgress] = useState(0);
@@ -323,6 +326,7 @@ export default function StudioCanvas() {
       tabsRef.current,
     );
     sceneRef.current = scene;
+    scene.setWheelZoomEnabled(true);
     scene.setBloom(scene.bloomMax);
     return () => {
       scene.dispose();
@@ -485,12 +489,18 @@ export default function StudioCanvas() {
         ref={canvasRef}
         className={`studio-stage${bgMode === "transparent" ? " is-transparent" : ""}`}
       />
+      {showCameraFrame && (
+        <div className="studio-export-frame" aria-hidden="true">
+          <span className="studio-export-frame-label">Camera Frame</span>
+          <span className="studio-export-frame-corner is-top-left" />
+          <span className="studio-export-frame-corner is-top-right" />
+          <span className="studio-export-frame-corner is-bottom-left" />
+          <span className="studio-export-frame-corner is-bottom-right" />
+        </div>
+      )}
 
       <header className="studio-head">
-        <h1 className="studio-title">Flower Studio</h1>
-        <p className="studio-sub">
-          Customize below · drag to orbit · export your bloom
-        </p>
+        <h1 className="studio-title">Bloom Animation Generator</h1>
       </header>
 
       {/* Parameter designer — the engine mounts its tabbed lil-gui here. */}
@@ -501,7 +511,7 @@ export default function StudioCanvas() {
 
       {/* Export panel — end-credits theme (cream ground, blue mono type) */}
       <aside className="studio-export studio-export--credits">
-        <h2 className="studio-export-title">Flower Studio · Export Sheet</h2>
+        <h2 className="studio-export-title">Export Sheet</h2>
 
         <PanelField label="Presets">
           <div className="studio-chips">
@@ -710,6 +720,36 @@ export default function StudioCanvas() {
             </div>
           )}
         </PanelSection>
+
+        <div className="studio-panel-footer">
+          <div className="studio-frame-toggle">
+            <span className="studio-panel-footer-label">Camera Frame</span>
+            <PanelSwitch
+              checked={showCameraFrame}
+              onChange={setShowCameraFrame}
+              disabled={exporting}
+            />
+          </div>
+          <p className="studio-interaction-guide" aria-label="Canvas controls">
+            <span className="studio-interaction-item">
+              <b>Orbit</b>
+              <Rotate3D className="studio-interaction-icon" aria-hidden="true" />
+              <span className="studio-interaction-input">Left drag</span>
+            </span>
+            <span className="studio-interaction-divider" aria-hidden="true" />
+            <span className="studio-interaction-item">
+              <b>Pan</b>
+              <Move className="studio-interaction-icon" aria-hidden="true" />
+              <span className="studio-interaction-input">Right drag</span>
+            </span>
+            <span className="studio-interaction-divider" aria-hidden="true" />
+            <span className="studio-interaction-item">
+              <b>Zoom</b>
+              <Mouse className="studio-interaction-icon" aria-hidden="true" />
+              <span className="studio-interaction-input">Scroll</span>
+            </span>
+          </p>
+        </div>
       </aside>
     </div>
   );
