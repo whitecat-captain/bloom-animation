@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap");
+
 /* Flower Studio — focused full-screen customizer + export tool.
    Reuses the liquid-glass utilities, lil-gui theme and bottom .gui-container
    panel from flower.css; this file adds the stage + export panel chrome. */
@@ -404,4 +406,222 @@
     top: 16px;
     left: 16px;
   }
+}
+
+/* =====================================================================
+   End-credits theme for the export panel (.studio-export--credits)
+   Warm cream ground, royal-blue monospace, right-aligned small-caps
+   labels paired with left-aligned controls — the film-credits look.
+   Scoped to the panel; the dark flower stage is untouched.
+   ===================================================================== */
+.studio-export--credits {
+  --paper: #f2eee1;
+  --ink: #2b2ae0;
+  --ink-soft: rgba(43, 42, 224, 0.5);
+  --line: rgba(43, 42, 224, 0.22);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Space Mono", ui-monospace, "SFMono-Regular", monospace;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.4);
+  gap: 16px;
+}
+
+/* masthead */
+.studio-export--credits .studio-export-title {
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* credit rows: right-aligned label | left-aligned control */
+.studio-export--credits .studio-field {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  align-items: center;
+  column-gap: 14px;
+  row-gap: 8px;
+}
+.studio-export--credits .studio-label {
+  grid-column: 1;
+  align-self: center;
+  text-align: right;
+  white-space: nowrap;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 9.5px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.studio-export--credits .studio-label em {
+  float: none;
+  font-style: normal;
+  color: var(--ink);
+  letter-spacing: 0.08em;
+}
+
+/* section groupings */
+.studio-export--credits .studio-section {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  gap: 14px;
+}
+.studio-export--credits .studio-section-title {
+  color: var(--ink);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+}
+
+/* segmented (Background) */
+.studio-export--credits .studio-seg {
+  background: transparent;
+  box-shadow: none;
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.studio-export--credits .studio-seg-btn {
+  border-radius: 0;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.studio-export--credits .studio-seg-btn:last-child {
+  border-right: none;
+}
+.studio-export--credits .studio-seg-btn:hover {
+  color: var(--ink);
+}
+.studio-export--credits .studio-seg-btn.active {
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: none;
+}
+
+/* colour swatch */
+.studio-export--credits .studio-color {
+  box-shadow: inset 0 0 0 1px var(--line);
+  border-radius: 3px;
+}
+
+/* preset chips */
+.studio-export--credits .studio-chip {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.studio-export--credits .studio-chip:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* selects */
+.studio-export--credits .studio-mini select {
+  background: transparent;
+  box-shadow: none;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.studio-export--credits .studio-mini select option {
+  color: #111;
+}
+
+/* timeline: play button + scrubber */
+.studio-export--credits .studio-play {
+  background: transparent;
+  border: 1px solid var(--line);
+  box-shadow: none;
+  border-radius: 3px;
+  color: var(--ink);
+}
+.studio-export--credits .studio-play:hover:not(:disabled) {
+  background: var(--ink);
+  color: var(--paper);
+}
+.studio-export--credits .studio-scrub::-webkit-slider-runnable-track {
+  background: rgba(43, 42, 224, 0.2);
+}
+.studio-export--credits .studio-scrub::-webkit-slider-thumb {
+  background: var(--ink);
+  box-shadow: none;
+}
+.studio-export--credits .studio-scrub::-moz-range-track {
+  background: rgba(43, 42, 224, 0.2);
+}
+.studio-export--credits .studio-scrub::-moz-range-thumb {
+  background: var(--ink);
+  box-shadow: none;
+}
+
+/* hint + ffmpeg line */
+.studio-export--credits .studio-hint {
+  grid-column: 1 / -1;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 9.5px;
+  line-height: 1.6;
+}
+.studio-export--credits .studio-hint code {
+  color: var(--ink);
+  background: rgba(43, 42, 224, 0.07);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+/* primary export buttons */
+.studio-export--credits .studio-export-btn {
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 3px;
+  box-shadow: none;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.studio-export--credits .studio-export-btn:hover:not(:disabled) {
+  filter: none;
+  transform: translateY(-1px);
+  background: #1f1ec7;
+}
+.studio-export--credits .studio-progress {
+  background: rgba(43, 42, 224, 0.15);
+}
+.studio-export--credits .studio-progress span {
+  background: var(--ink);
+}
+
+/* scrollbar */
+.studio-export--credits::-webkit-scrollbar {
+  width: 8px;
+}
+.studio-export--credits::-webkit-scrollbar-thumb {
+  background: rgba(43, 42, 224, 0.3);
+  border-radius: 4px;
 }

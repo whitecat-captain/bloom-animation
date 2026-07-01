@@ -248,9 +248,9 @@ export default function StudioCanvas() {
         <div ref={guiRef} className="gui-scroll" />
       </div>
 
-      {/* Export panel */}
-      <aside className="studio-export liquid-glass-strong">
-        <h2 className="studio-export-title">Export</h2>
+      {/* Export panel — end-credits theme (cream ground, blue mono type) */}
+      <aside className="studio-export studio-export--credits">
+        <h2 className="studio-export-title">Flower Studio · Export Sheet</h2>
 
         <div className="studio-field">
           <span className="studio-label">Presets</span>
