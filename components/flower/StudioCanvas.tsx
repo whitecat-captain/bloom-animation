@@ -270,33 +270,36 @@ export default function StudioCanvas() {
 
         <div className="studio-field">
           <span className="studio-label">Background</span>
-          <div className="studio-bg-row">
-            <div className="studio-seg">
-              <button
-                type="button"
-                className={`studio-seg-btn${bgMode === "transparent" ? " active" : ""}`}
-                onClick={() => setBgMode("transparent")}
-              >
-                Transparent
-              </button>
-              <button
-                type="button"
-                className={`studio-seg-btn${bgMode === "solid" ? " active" : ""}`}
-                onClick={() => setBgMode("solid")}
-              >
-                Solid
-              </button>
-            </div>
+          <div className="studio-seg">
+            <button
+              type="button"
+              className={`studio-seg-btn${bgMode === "transparent" ? " active" : ""}`}
+              onClick={() => setBgMode("transparent")}
+            >
+              Transparent
+            </button>
+            <button
+              type="button"
+              className={`studio-seg-btn${bgMode === "solid" ? " active" : ""}`}
+              onClick={() => setBgMode("solid")}
+            >
+              Solid
+            </button>
+          </div>
+        </div>
+
+        {bgMode === "solid" && (
+          <div className="studio-field">
+            <span className="studio-label">Color</span>
             <input
               type="color"
               className="studio-color"
               value={color}
-              disabled={bgMode !== "solid"}
               onChange={(e) => setColor(e.target.value)}
               aria-label="Background color"
             />
           </div>
-        </div>
+        )}
 
         {/* ---- Image Export ---- */}
         <section className="studio-section">
