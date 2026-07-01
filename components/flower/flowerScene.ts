@@ -3,6 +3,20 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import GUI from "lil-gui";
 
 const MAX_LAYOUT_PETALS = 150;
+const DEFAULT_PETAL_GEOMETRY = {
+  petalLen: 0.95,
+  curlClosed: 1.7,
+  curlOpen: -0.35,
+  curlBias: 2.3,
+  w0: 0.16,
+  w1: 0.28,
+  w2: 0.3,
+  w3: 0.2,
+  cup: 0.4,
+  sideCurl: 0.45,
+  waveAmp: 0.035,
+  asym: 0.08,
+};
 
 export type PetalShapeState = {
   petalLen: number;
@@ -562,6 +576,18 @@ void main() {
   // single petal is easy to study.
   const PETAL_MIN = 5;
   const gui = new GUI({ container: guiContainer });
+  const stopNumberWheelAdjust = (event: WheelEvent) => {
+    const target = event.target;
+    if (
+      target instanceof Element &&
+      target.closest(".lil-controller.lil-number")
+    ) {
+      event.stopPropagation();
+    }
+  };
+  guiContainer.addEventListener("wheel", stopNumberWheelAdjust, {
+    capture: true,
+  });
   const U = (name: keyof typeof uniforms) => (v: number) => {
     uniforms[name].value = v;
   };
@@ -599,21 +625,24 @@ void main() {
 
   // Petal Shape: the flat outline + size of a single petal.
   const fShape = fPetal.addFolder("Petal Shape");
-  fShape.add(params, "petalLen", 0.3, 1.5).name("Petal Length").onChange(shapeU("uLength"));
-  fShape.add(params, "w0", 0, 0.6).name("Base Width").onChange(shapeBake);
-  fShape.add(params, "w1", 0, 0.6).name("Lower Width").onChange(shapeBake);
-  fShape.add(params, "w2", 0, 0.6).name("Upper Width").onChange(shapeBake);
-  fShape.add(params, "w3", 0, 0.6).name("Tip Width").onChange(shapeBake);
+  const petalGeometryCtrls = [
+    fShape.add(params, "petalLen", 0.3, 1.5).name("Petal Length").onChange(shapeU("uLength")).decimals(1),
+    fShape.add(params, "w0", 0, 0.6).name("Base Width").onChange(shapeBake).decimals(1),
+    fShape.add(params, "w1", 0, 0.6).name("Lower Width").onChange(shapeBake).decimals(1),
+    fShape.add(params, "w2", 0, 0.6).name("Upper Width").onChange(shapeBake).decimals(1),
+    fShape.add(params, "w3", 0, 0.6).name("Tip Width").onChange(shapeBake).decimals(1),
+  ];
 
   // Transform: how that flat petal curls and bends in 3D.
   const fTransform = fPetal.addFolder("Transform");
-  fTransform.add(params, "curlClosed", 0, 4).name("Curl (Closed)").onChange(U("uCurlClosed"));
-  fTransform.add(params, "curlOpen", -1.5, 1).name("Curl (Open)").onChange(shapeU("uCurlOpen"));
-  fTransform.add(params, "curlBias", 0.3, 4).name("Curl Concentration").onChange(shapeBake);
-  fTransform.add(params, "cup", 0, 1.5).name("Cup Arch").onChange(shapeU("uCup"));
-  fTransform.add(params, "sideCurl", -3, 3).name("Transverse Curl").onChange(shapeU("uSideCurl"));
-  fTransform.add(params, "waveAmp", 0, 0.08).name("Edge Wave Amp").onChange(shapeU("uWaveAmp"));
-  fTransform.add(params, "asym", -0.4, 0.4).name("Asymmetry").onChange(shapeU("uAsym"));
+  petalGeometryCtrls.push(
+    fTransform.add(params, "curlOpen", -1.5, 1).name("Curl (Open)").onChange(shapeU("uCurlOpen")).decimals(1),
+    fTransform.add(params, "curlBias", 0.3, 4).name("Curl Concentration").onChange(shapeBake).decimals(1),
+    fTransform.add(params, "cup", 0, 1.5).name("Cup Arch").onChange(shapeU("uCup")).decimals(1),
+    fTransform.add(params, "sideCurl", -3, 3).name("Transverse Curl").onChange(shapeU("uSideCurl")).decimals(1),
+    fTransform.add(params, "waveAmp", 0, 0.08).name("Edge Wave Amp").onChange(shapeU("uWaveAmp")).decimals(1),
+    fTransform.add(params, "asym", -0.4, 0.4).name("Asymmetry").onChange(shapeU("uAsym")).decimals(1),
+  );
 
   const fPhy = gui.addFolder("Phyllotaxis Layout");
   const numPetalsCtrl = fPhy
@@ -858,6 +887,7 @@ void main() {
     setCurl(v: number) {
       params.curlClosed = v;
       uniforms.uCurlClosed.value = v;
+      notifyPetalShapeChange();
     },
     /** Open-petal curl — what's visible on a bloomed flower (/demo card 01). */
     setCurlOpen(v: number) {
@@ -898,6 +928,14 @@ void main() {
     setSideCurl(v: number) {
       params.sideCurl = v;
       uniforms.uSideCurl.value = v;
+      notifyPetalShapeChange();
+    },
+    /** Restore the single-petal shape controls without touching layout/export. */
+    resetPetalGeometry() {
+      Object.assign(params, DEFAULT_PETAL_GEOMETRY);
+      bakeRamps();
+      syncShapeUniforms();
+      petalGeometryCtrls.forEach((ctrl) => ctrl.updateDisplay());
       notifyPetalShapeChange();
     },
     /** Flat tone-shading vs. soft Lambert + subsurface lighting. */
@@ -1007,6 +1045,9 @@ void main() {
       renderer.setAnimationLoop(null);
       ro.disconnect();
       window.removeEventListener("resize", onResize);
+      guiContainer.removeEventListener("wheel", stopNumberWheelAdjust, {
+        capture: true,
+      });
       gui.destroy();
       tabsCleanup?.();
       if (tabsContainer) tabsContainer.replaceChildren();

@@ -49,11 +49,33 @@
   gap: 10px;
 }
 .studio-petal-preview {
+  position: relative;
   flex: 0 0 108px;
   min-height: 0;
   overflow: hidden;
   border-radius: 10px;
   background: #0b1020;
+}
+.studio-petal-reset {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.82);
+  font: 600 15px/1 "Inter", system-ui, sans-serif;
+  cursor: pointer;
+}
+.studio-petal-reset:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
 }
 .studio-petal-preview-canvas {
   width: 100%;

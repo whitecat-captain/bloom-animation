@@ -532,7 +532,11 @@ export default function StudioCanvas() {
         <div ref={tabsRef} className="gui-tabs" />
         <div className="studio-design-panel-main">
           {activeDesignTab === "Petal Geometry" && (
-            <PetalShapePreview shape={petalShape} />
+            <PetalShapePreview
+              shape={petalShape}
+              palette={PRESETS[selectedPreset].stops}
+              onReset={() => sceneRef.current?.resetPetalGeometry()}
+            />
           )}
           <div ref={guiRef} className="gui-scroll" />
         </div>
