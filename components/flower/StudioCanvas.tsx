@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { createFlowerScene, type FlowerSceneApi } from "./flowerScene";
 import {
   downloadBlob,
@@ -9,8 +9,21 @@ import {
   recordVideo,
   type Background,
 } from "./flowerExport";
+import {
+  PanelButton,
+  PanelActionRow,
+  PanelChip,
+  PanelField,
+  PanelSection,
+  PanelSegmented,
+  PanelSelect,
+} from "./StudioPanelControls";
 
 type BgMode = "transparent" | "solid";
+type Rgb = { r: number; g: number; b: number };
+type Hsv = { h: number; s: number; v: number };
+type Hsl = { h: number; s: number; l: number };
+type ColorFormat = "hex" | "rgb" | "hsl";
 
 // Resolutions are target heights; the width is derived from the live canvas
 // aspect at export time so the output frames the flower exactly as previewed.
@@ -21,6 +34,10 @@ const RES_OPTIONS: { label: string; h: number }[] = [
   { label: "4K", h: 2160 },
 ];
 const DEFAULT_RES = 1; // 1080p
+const BG_OPTIONS: { label: string; value: BgMode }[] = [
+  { label: "Solid", value: "solid" },
+  { label: "Transparent", value: "transparent" },
+];
 
 // Palette-only starter looks (5 stops, cold rim -> hot core), applied instantly
 // via scene.setPalette without rebuilding the mesh.
@@ -71,14 +88,160 @@ function timestamp() {
   return new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 }
 
+function clamp(n: number, min: number, max: number) {
+  return Math.min(Math.max(n, min), max);
+}
+
+function rgbToHex({ r, g, b }: Rgb) {
+  const toHex = (n: number) =>
+    Math.round(clamp(n, 0, 255)).toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+}
+
+function hexToRgb(hex: string): Rgb | null {
+  const raw = hex.replace("#", "").trim();
+  if (!/^[\da-f]{6}$/i.test(raw)) return null;
+  return {
+    r: parseInt(raw.slice(0, 2), 16),
+    g: parseInt(raw.slice(2, 4), 16),
+    b: parseInt(raw.slice(4, 6), 16),
+  };
+}
+
+function rgbToHsv({ r, g, b }: Rgb): Hsv {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const d = max - min;
+  let h = 0;
+
+  if (d !== 0) {
+    if (max === rn) h = ((gn - bn) / d) % 6;
+    else if (max === gn) h = (bn - rn) / d + 2;
+    else h = (rn - gn) / d + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+
+  return {
+    h,
+    s: max === 0 ? 0 : d / max,
+    v: max,
+  };
+}
+
+function hsvToRgb({ h, s, v }: Hsv): Rgb {
+  const c = v * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = v - c;
+  let rp = 0;
+  let gp = 0;
+  let bp = 0;
+
+  if (h < 60) [rp, gp, bp] = [c, x, 0];
+  else if (h < 120) [rp, gp, bp] = [x, c, 0];
+  else if (h < 180) [rp, gp, bp] = [0, c, x];
+  else if (h < 240) [rp, gp, bp] = [0, x, c];
+  else if (h < 300) [rp, gp, bp] = [x, 0, c];
+  else [rp, gp, bp] = [c, 0, x];
+
+  return {
+    r: (rp + m) * 255,
+    g: (gp + m) * 255,
+    b: (bp + m) * 255,
+  };
+}
+
+function rgbToHsl({ r, g, b }: Rgb): Hsl {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const d = max - min;
+  const l = (max + min) / 2;
+  let h = 0;
+  let s = 0;
+
+  if (d !== 0) {
+    s = d / (1 - Math.abs(2 * l - 1));
+    if (max === rn) h = ((gn - bn) / d) % 6;
+    else if (max === gn) h = (bn - rn) / d + 2;
+    else h = (rn - gn) / d + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+
+  return { h, s, l };
+}
+
+function hslToRgb({ h, s, l }: Hsl): Rgb {
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  let rp = 0;
+  let gp = 0;
+  let bp = 0;
+
+  if (h < 60) [rp, gp, bp] = [c, x, 0];
+  else if (h < 120) [rp, gp, bp] = [x, c, 0];
+  else if (h < 180) [rp, gp, bp] = [0, c, x];
+  else if (h < 240) [rp, gp, bp] = [0, x, c];
+  else if (h < 300) [rp, gp, bp] = [x, 0, c];
+  else [rp, gp, bp] = [c, 0, x];
+
+  return {
+    r: (rp + m) * 255,
+    g: (gp + m) * 255,
+    b: (bp + m) * 255,
+  };
+}
+
+function formatColorValue(rgb: Rgb, format: ColorFormat) {
+  if (format === "hex") return rgbToHex(rgb);
+  if (format === "rgb") {
+    return `${Math.round(rgb.r)} ${Math.round(rgb.g)} ${Math.round(rgb.b)}`;
+  }
+  const hsl = rgbToHsl(rgb);
+  return `${Math.round(hsl.h)} ${Math.round(hsl.s * 100)}% ${Math.round(hsl.l * 100)}%`;
+}
+
+function parseColorValue(value: string, format: ColorFormat): Rgb | null {
+  if (format === "hex") return hexToRgb(value);
+  const nums = value.match(/-?\d*\.?\d+/g)?.map(Number) ?? [];
+  if (format === "rgb") {
+    if (nums.length < 3) return null;
+    return {
+      r: clamp(nums[0], 0, 255),
+      g: clamp(nums[1], 0, 255),
+      b: clamp(nums[2], 0, 255),
+    };
+  }
+  if (nums.length < 3) return null;
+  return hslToRgb({
+    h: ((nums[0] % 360) + 360) % 360,
+    s: clamp(nums[1], 0, 100) / 100,
+    l: clamp(nums[2], 0, 100) / 100,
+  });
+}
+
 export default function StudioCanvas() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const guiRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<FlowerSceneApi | null>(null);
+  const planeThumbRef = useRef<HTMLSpanElement>(null);
+  const hueThumbRef = useRef<HTMLSpanElement>(null);
+  const colorRef = useRef("#0b1020");
+  const pendingColorRef = useRef<string | null>(null);
+  const colorRafRef = useRef<number | null>(null);
 
   const [bgMode, setBgMode] = useState<BgMode>("solid");
   const [color, setColor] = useState("#0b1020");
+  const [colorFormat, setColorFormat] = useState<ColorFormat>("hex");
+  const [colorDraft, setColorDraft] = useState("#0B1020");
   // Aurora (index 0) is the scene's default palette, so it starts selected.
   const [selectedPreset, setSelectedPreset] = useState(0);
   const [duration, setDuration] = useState(5);
@@ -95,6 +258,17 @@ export default function StudioCanvas() {
   // uses (bloomForTime), so the preview matches the output exactly.
   const [playing, setPlaying] = useState(false);
   const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    colorRef.current = color;
+  }, [color]);
+
+  useEffect(
+    () => () => {
+      if (colorRafRef.current !== null) cancelAnimationFrame(colorRafRef.current);
+    },
+    [],
+  );
 
   const previewEnd = (d: number) => {
     const scene = sceneRef.current;
@@ -230,6 +404,81 @@ export default function StudioCanvas() {
     });
   }
 
+  const rgb = hexToRgb(color) ?? { r: 11, g: 16, b: 32 };
+  const hsv = rgbToHsv(rgb);
+  const hueColor = rgbToHex(hsvToRgb({ h: hsv.h, s: 1, v: 1 }));
+
+  useEffect(() => {
+    setColorDraft(formatColorValue(hexToRgb(color) ?? { r: 11, g: 16, b: 32 }, colorFormat));
+  }, [colorFormat, color]);
+
+  function queueColor(nextColor: string) {
+    if (nextColor === colorRef.current && !pendingColorRef.current) return;
+    pendingColorRef.current = nextColor;
+    if (colorRafRef.current !== null) return;
+    colorRafRef.current = requestAnimationFrame(() => {
+      colorRafRef.current = null;
+      const queued = pendingColorRef.current;
+      pendingColorRef.current = null;
+      if (!queued || queued === colorRef.current) return;
+      colorRef.current = queued;
+      setColor(queued);
+    });
+  }
+
+  function colorFromHsv(next: Hsv) {
+    return rgbToHex(hsvToRgb({
+      h: (next.h + 360) % 360,
+      s: clamp(next.s, 0, 1),
+      v: clamp(next.v, 0, 1),
+    }));
+  }
+
+  function currentHsv() {
+    return rgbToHsv(hexToRgb(colorRef.current) ?? rgb);
+  }
+
+  function setColorFromHsv(next: Hsv) {
+    queueColor(colorFromHsv(next));
+  }
+
+  function updateColorPlane(e: PointerEvent<HTMLButtonElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = clamp(e.clientX - rect.left, 0, rect.width);
+    const y = clamp(e.clientY - rect.top, 0, rect.height);
+    const nextS = x / rect.width;
+    const nextV = 1 - y / rect.height;
+    if (planeThumbRef.current) {
+      planeThumbRef.current.style.left = `${nextS * 100}%`;
+      planeThumbRef.current.style.top = `${(1 - nextV) * 100}%`;
+    }
+    setColorFromHsv({
+      h: currentHsv().h,
+      s: nextS,
+      v: nextV,
+    });
+  }
+
+  function updateHue(e: PointerEvent<HTMLButtonElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = clamp(e.clientX - rect.left, 0, rect.width);
+    const nextH = (x / rect.width) * 360;
+    if (hueThumbRef.current) hueThumbRef.current.style.left = `${(nextH / 360) * 100}%`;
+    const { s, v } = currentHsv();
+    setColorFromHsv({
+      h: nextH,
+      s,
+      v,
+    });
+  }
+
+  function updateColorValue(value: string) {
+    const next = colorFormat === "hex" ? value.toUpperCase() : value;
+    setColorDraft(next);
+    const parsed = parseColorValue(next, colorFormat);
+    if (parsed) setColor(rgbToHex(parsed));
+  }
+
   return (
     <div className="studio">
       <div
@@ -254,109 +503,146 @@ export default function StudioCanvas() {
       <aside className="studio-export studio-export--credits">
         <h2 className="studio-export-title">Flower Studio · Export Sheet</h2>
 
-        <div className="studio-field">
-          <span className="studio-label">Presets</span>
+        <PanelField label="Presets">
           <div className="studio-chips">
             {PRESETS.map((p, i) => (
-              <button
+              <PanelChip
                 key={p.name}
-                type="button"
-                className={`studio-chip${selectedPreset === i ? " active" : ""}`}
+                active={selectedPreset === i}
                 onClick={() => {
                   setSelectedPreset(i);
                   sceneRef.current?.setPalette(p.stops);
                 }}
               >
                 {p.name}
-              </button>
+              </PanelChip>
             ))}
           </div>
-        </div>
+        </PanelField>
 
-        <div className="studio-field">
-          <span className="studio-label">Background</span>
-          <div className="studio-seg">
-            <button
-              type="button"
-              className={`studio-seg-btn${bgMode === "transparent" ? " active" : ""}`}
-              onClick={() => setBgMode("transparent")}
-            >
-              Transparent
-            </button>
-            <button
-              type="button"
-              className={`studio-seg-btn${bgMode === "solid" ? " active" : ""}`}
-              onClick={() => setBgMode("solid")}
-            >
-              Solid
-            </button>
-          </div>
-        </div>
-
-        {bgMode === "solid" && (
-          <div className="studio-field">
-            <span className="studio-label">Color</span>
-            <input
-              type="color"
-              className="studio-color"
-              value={color}
-              onChange={(e) => setColor(e.target.value)}
-              aria-label="Background color"
+        <PanelSection title="Background">
+          <PanelField label="Mode">
+            <PanelSegmented
+              value={bgMode}
+              options={BG_OPTIONS}
+              onChange={setBgMode}
             />
-          </div>
-        )}
+          </PanelField>
+
+          {bgMode === "solid" && (
+            <PanelField label="Color" full className="studio-color-field">
+              <div className="studio-color-picker">
+                <div className="studio-color-head">
+                  <span
+                    className="studio-color-swatch"
+                    style={{ backgroundColor: color }}
+                    aria-hidden="true"
+                  />
+                  <input
+                    className="studio-color-input"
+                    value={colorDraft}
+                    maxLength={colorFormat === "hex" ? 7 : 18}
+                    spellCheck={false}
+                    onChange={(e) => updateColorValue(e.target.value)}
+                    onBlur={() => {
+                      setColorDraft(formatColorValue(rgb, colorFormat));
+                    }}
+                    aria-label={`Background color ${colorFormat.toUpperCase()}`}
+                  />
+                  <select
+                    className="studio-color-format"
+                    value={colorFormat}
+                    onChange={(e) => setColorFormat(e.target.value as ColorFormat)}
+                    aria-label="Color format"
+                  >
+                    <option value="hex">HEX</option>
+                    <option value="rgb">RGB</option>
+                    <option value="hsl">HSL</option>
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  className="studio-color-plane"
+                  style={{
+                    background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, ${hueColor})`,
+                  }}
+                  onPointerDown={(e) => {
+                    e.currentTarget.setPointerCapture(e.pointerId);
+                    updateColorPlane(e);
+                  }}
+                  onPointerMove={(e) => {
+                    if (e.buttons === 1) updateColorPlane(e);
+                  }}
+                  aria-label="Pick saturation and brightness"
+                >
+                  <span
+                    ref={planeThumbRef}
+                    className="studio-color-plane-thumb"
+                    style={{
+                      left: `${hsv.s * 100}%`,
+                      top: `${(1 - hsv.v) * 100}%`,
+                    }}
+                  />
+                </button>
+
+                <button
+                  type="button"
+                  className="studio-hue-track"
+                  onPointerDown={(e) => {
+                    e.currentTarget.setPointerCapture(e.pointerId);
+                    updateHue(e);
+                  }}
+                  onPointerMove={(e) => {
+                    if (e.buttons === 1) updateHue(e);
+                  }}
+                  aria-label="Pick hue"
+                >
+                  <span
+                    ref={hueThumbRef}
+                    className="studio-hue-thumb"
+                    style={{ left: `${(hsv.h / 360) * 100}%` }}
+                  />
+                </button>
+              </div>
+            </PanelField>
+          )}
+        </PanelSection>
 
         {/* ---- Image Export ---- */}
-        <section className="studio-section">
-          <h3 className="studio-section-title">Image Export</h3>
-          <label className="studio-field studio-mini">
-            <span className="studio-label">Resolution</span>
-            <select
+        <PanelSection title="Image Export">
+          <PanelField label="Resolution" className="studio-mini">
+            <PanelSelect
               value={imageRes}
-              onChange={(e) => setImageRes(Number(e.target.value))}
+              options={RES_OPTIONS.map((r, i) => ({ label: r.label, value: i }))}
+              onChange={setImageRes}
               disabled={exporting}
+            />
+          </PanelField>
+          <PanelActionRow>
+            <PanelButton
+              disabled={exporting}
+              onClick={handleExportImage}
             >
-              {RES_OPTIONS.map((r, i) => (
-                <option key={r.label} value={i}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            type="button"
-            className="studio-export-btn"
-            disabled={exporting}
-            onClick={handleExportImage}
-          >
-            {exportKind === "image" ? "Exporting…" : "Export Image"}
-          </button>
-        </section>
+              {exportKind === "image" ? "Exporting…" : "Export Image"}
+            </PanelButton>
+          </PanelActionRow>
+        </PanelSection>
 
         {/* ---- Video Export ---- */}
-        <section className="studio-section">
-          <h3 className="studio-section-title">Video Export</h3>
-          <label className="studio-field studio-mini">
-            <span className="studio-label">Resolution</span>
-            <select
+        <PanelSection title="Video Export">
+          <PanelField label="Resolution" className="studio-mini">
+            <PanelSelect
               value={videoRes}
-              onChange={(e) => setVideoRes(Number(e.target.value))}
+              options={RES_OPTIONS.map((r, i) => ({ label: r.label, value: i }))}
+              onChange={setVideoRes}
               disabled={exporting}
-            >
-              {RES_OPTIONS.map((r, i) => (
-                <option key={r.label} value={i}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
-          </label>
+            />
+          </PanelField>
 
           {/* The Duration slider doubles as the preview — dragging it sets the
               length and shows where the bloom lands; ▶ plays the full clip. */}
-          <div className="studio-field">
-            <span className="studio-label">
-              Duration <em>{duration}s</em>
-            </span>
+          <PanelField label="Duration" value={`${duration}s`}>
             <div className="studio-timeline">
               <button
                 type="button"
@@ -393,7 +679,7 @@ export default function StudioCanvas() {
                 aria-label="Duration and bloom preview"
               />
             </div>
-          </div>
+          </PanelField>
 
           {bgMode === "transparent" && (
             <p className="studio-hint">
@@ -406,24 +692,24 @@ export default function StudioCanvas() {
             </p>
           )}
 
-          <button
-            type="button"
-            className="studio-export-btn"
-            disabled={exporting}
-            onClick={handleExportVideo}
-          >
-            {exportKind === "video"
-              ? `Rendering… ${Math.round(progress * 100)}%`
-              : bgMode === "solid"
-                ? "Start Recording (MP4)"
-                : "Export PNG Sequence"}
-          </button>
+          <PanelActionRow>
+            <PanelButton
+              disabled={exporting}
+              onClick={handleExportVideo}
+            >
+              {exportKind === "video"
+                ? `Rendering… ${Math.round(progress * 100)}%`
+                : bgMode === "solid"
+                  ? "Export Video"
+                  : "Export PNG Sequence"}
+            </PanelButton>
+          </PanelActionRow>
           {exportKind === "video" && (
             <div className="studio-progress" aria-hidden="true">
               <span style={{ width: `${Math.round(progress * 100)}%` }} />
             </div>
           )}
-        </section>
+        </PanelSection>
       </aside>
     </div>
   );
