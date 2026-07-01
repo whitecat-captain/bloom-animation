@@ -777,6 +777,10 @@ void main() {
       );
       controls.update();
     },
+    /** Studio is a full-height work surface, so it can use plain wheel zoom. */
+    setWheelZoomEnabled(on: boolean) {
+      controls.enableZoom = on;
+    },
     /** Rebuilds the layout — used by the /mockup showcase sliders. */
     setGoldenAngle(deg: number) {
       params.goldenAngle = deg;
