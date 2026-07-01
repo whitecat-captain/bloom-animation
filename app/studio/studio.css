@@ -422,13 +422,14 @@
   width: 322px;
   overflow-x: hidden;
   overflow-y: auto;
+  padding: 16px;
   background: var(--paper);
   color: var(--ink);
   font-family: "Space Mono", ui-monospace, "SFMono-Regular", monospace;
   border: 1px solid var(--line);
   border-radius: 5px;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.4);
-  gap: 16px;
+  gap: 11px;
 }
 
 /* masthead */
@@ -439,7 +440,7 @@
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  padding-bottom: 12px;
+  padding-bottom: 9px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -458,7 +459,7 @@
 .studio-export--credits .studio-label {
   grid-column: 1;
   align-self: center;
-  text-align: right;
+  text-align: left;
   white-space: nowrap;
   color: var(--ink-soft);
   font-family: inherit;
@@ -477,8 +478,8 @@
 /* section groupings */
 .studio-export--credits .studio-section {
   border-top: 1px solid var(--line);
-  padding-top: 16px;
-  gap: 14px;
+  padding-top: 11px;
+  gap: 10px;
 }
 .studio-export--credits .studio-section-title {
   color: var(--ink);
@@ -542,13 +543,18 @@
   text-transform: none;
 }
 .studio-export--credits .studio-chip:hover {
+  background: rgba(43, 42, 224, 0.12);
+  color: var(--ink);
+}
+.studio-export--credits .studio-chip.active {
   background: var(--ink);
   color: var(--paper);
+  border-color: var(--ink);
 }
 
 /* selects */
 .studio-export--credits .studio-mini select {
-  background: transparent;
+  background-color: transparent;
   box-shadow: none;
   border: 1px solid var(--line);
   border-radius: 3px;
@@ -557,6 +563,11 @@
   font-size: 11px;
   letter-spacing: 0.02em;
   text-transform: none;
+  /* custom down chevron (native arrow is removed by appearance: none) */
+  padding-right: 28px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 11 11'%3E%3Cpath d='M2.5 4 5.5 7 8.5 4' fill='none' stroke='%232b2ae0' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
 }
 .studio-export--credits .studio-mini select option {
   color: #111;

@@ -79,6 +79,8 @@ export default function StudioCanvas() {
 
   const [bgMode, setBgMode] = useState<BgMode>("solid");
   const [color, setColor] = useState("#0b1020");
+  // Aurora (index 0) is the scene's default palette, so it starts selected.
+  const [selectedPreset, setSelectedPreset] = useState(0);
   const [duration, setDuration] = useState(5);
   const [imageRes, setImageRes] = useState(DEFAULT_RES);
   const [videoRes, setVideoRes] = useState(DEFAULT_RES);
@@ -255,12 +257,15 @@ export default function StudioCanvas() {
         <div className="studio-field">
           <span className="studio-label">Presets</span>
           <div className="studio-chips">
-            {PRESETS.map((p) => (
+            {PRESETS.map((p, i) => (
               <button
                 key={p.name}
                 type="button"
-                className="studio-chip"
-                onClick={() => sceneRef.current?.setPalette(p.stops)}
+                className={`studio-chip${selectedPreset === i ? " active" : ""}`}
+                onClick={() => {
+                  setSelectedPreset(i);
+                  sceneRef.current?.setPalette(p.stops);
+                }}
               >
                 {p.name}
               </button>
