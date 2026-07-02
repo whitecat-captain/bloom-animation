@@ -35,6 +35,7 @@ export type PetalShapeState = {
 type FlowerSceneOptions = {
   onPetalShapeChange?: (shape: PetalShapeState) => void;
   onActiveDesignTabChange?: (title: string) => void;
+  flowerGroupY?: number;
 };
 
 /**
@@ -417,7 +418,7 @@ void main() {
   // Scroll-driven rotation lives on the group so OrbitControls (camera)
   // and ScrollTrigger (flower) never fight over the same transform.
   const flowerGroup = new THREE.Group();
-  flowerGroup.position.y = 0.45;
+  flowerGroup.position.y = options.flowerGroupY ?? 0.45;
   flowerGroup.scale.setScalar(1.3);
   scene.add(flowerGroup);
 
