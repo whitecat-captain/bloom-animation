@@ -17,6 +17,7 @@ import {
 } from "./flowerExport";
 import PetalOutlineEditor from "./PetalOutlineEditor";
 import PetalShapePreview from "./PetalShapePreview";
+import PhyllotaxisPreview from "./PhyllotaxisPreview";
 import StudioDesignPane, {
   type PetalFormKey,
   type PhyllotaxisKey,
@@ -491,6 +492,50 @@ export default function StudioCanvas() {
     () => <WindPreview wind={{ windAmp, windSpeed, windHeading }} />,
     [windAmp, windSpeed, windHeading],
   );
+  const {
+    numPetals,
+    goldenAngle,
+    radius,
+    radiusBias,
+    height,
+    heightBias,
+    scaleInner,
+    tiltInner,
+    outAngle,
+    tiltBias,
+  } = designState.phyllotaxis;
+  const arrangementPreview = useMemo(
+    () => (
+      <PhyllotaxisPreview
+        layout={{
+          numPetals,
+          goldenAngle,
+          radius,
+          radiusBias,
+          height,
+          heightBias,
+          scaleInner,
+          tiltInner,
+          outAngle,
+          tiltBias,
+        }}
+        palette={palette}
+      />
+    ),
+    [
+      numPetals,
+      goldenAngle,
+      radius,
+      radiusBias,
+      height,
+      heightBias,
+      scaleInner,
+      tiltInner,
+      outAngle,
+      tiltBias,
+      palette,
+    ],
+  );
 
   return (
     <div className="studio">
@@ -527,6 +572,7 @@ export default function StudioCanvas() {
               selectedPreset={selectedPreset}
               outlineEditor={outlineEditor}
               petalPreview={petalPreview}
+              arrangementPreview={arrangementPreview}
               windPreview={windPreview}
               duration={duration}
               previewTime={previewTime}

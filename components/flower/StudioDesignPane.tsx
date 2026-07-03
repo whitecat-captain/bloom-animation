@@ -62,6 +62,7 @@ type DesignPaneBindings = Record<
 type DesignPaneRoots = {
   outline: Root;
   preview: Root;
+  arrangement: Root;
   wind: Root;
 };
 
@@ -77,6 +78,7 @@ type StudioDesignPaneProps = {
   selectedPreset: number;
   outlineEditor: ReactNode;
   petalPreview: ReactNode;
+  arrangementPreview: ReactNode;
   windPreview: ReactNode;
   duration: number;
   previewTime: number;
@@ -114,6 +116,7 @@ export default function StudioDesignPane({
   selectedPreset,
   outlineEditor,
   petalPreview,
+  arrangementPreview,
   windPreview,
   duration,
   previewTime,
@@ -400,11 +403,19 @@ export default function StudioDesignPane({
     tiltBias.on("change", (event) => {
       callbacksRef.current.onPhyllotaxisChange("tiltBias", event.value);
     });
+    // Foreign DOM must go in after every blade exists — tweakpane positions
+    // new blades by rack index, so an earlier insert would shuffle them.
+    const arrangementSlot = document.createElement("div");
+    arrangementSlot.className = "studio-design-preview-slot";
+    getFolderContent(arrangement)?.insertBefore(
+      arrangementSlot,
+      numPetals.element,
+    );
+    const arrangementRoot = createRoot(arrangementSlot);
 
-    // Wind first (easiest to grasp, with a live demo up top), then the
-    // subtler randomness / surface-detail controls.
+    // Wind proper: exactly the parameters the demo box visualises.
     const wind = pane.addFolder({
-      title: "Wind & Movement",
+      title: "Wind",
       expanded: false,
     });
     createdBlades.push(wind);
@@ -420,28 +431,34 @@ export default function StudioDesignPane({
     windHeading.on("change", (event) => {
       callbacksRef.current.onWindChange("windHeading", event.value);
     });
-    const jitter = bindNumber(wind, "jitter", "Petal Randomness", 0, 0.4, 0.01, 2);
-    jitter.on("change", (event) => {
-      callbacksRef.current.onWindChange("jitter", event.value);
-    });
-    const noiseAmp = bindNumber(wind, "noiseAmp", "Surface Ripple", 0, 0.12, 0.01, 2);
-    noiseAmp.on("change", (event) => {
-      callbacksRef.current.onWindChange("noiseAmp", event.value);
-    });
-    const noiseFreq = bindNumber(wind, "noiseFreq", "Ripple Detail", 1, 15, 0.1);
-    noiseFreq.on("change", (event) => {
-      callbacksRef.current.onWindChange("noiseFreq", event.value);
-    });
-    const shellGap = bindNumber(wind, "shellGap", "Closed Bud Gap", 0, 0.5, 0.01, 2);
-    shellGap.on("change", (event) => {
-      callbacksRef.current.onWindChange("shellGap", event.value);
-    });
-    // Foreign DOM must go in after every blade exists — tweakpane positions
-    // new blades by rack index, so an earlier insert would shuffle them.
     const windSlot = document.createElement("div");
     windSlot.className = "studio-design-preview-slot";
     getFolderContent(wind)?.insertBefore(windSlot, windAmp.element);
     const windRoot = createRoot(windSlot);
+
+    // Petal-surface irregularity — affects the petals themselves, not the
+    // wind, so it lives apart from the wind demo.
+    const detail = pane.addFolder({
+      title: "Natural Detail",
+      expanded: false,
+    });
+    createdBlades.push(detail);
+    const jitter = bindNumber(detail, "jitter", "Petal Randomness", 0, 0.4, 0.01, 2);
+    jitter.on("change", (event) => {
+      callbacksRef.current.onWindChange("jitter", event.value);
+    });
+    const noiseAmp = bindNumber(detail, "noiseAmp", "Surface Ripple", 0, 0.12, 0.01, 2);
+    noiseAmp.on("change", (event) => {
+      callbacksRef.current.onWindChange("noiseAmp", event.value);
+    });
+    const noiseFreq = bindNumber(detail, "noiseFreq", "Ripple Detail", 1, 15, 0.1);
+    noiseFreq.on("change", (event) => {
+      callbacksRef.current.onWindChange("noiseFreq", event.value);
+    });
+    const shellGap = bindNumber(detail, "shellGap", "Closed Bud Gap", 0, 0.5, 0.01, 2);
+    shellGap.on("change", (event) => {
+      callbacksRef.current.onWindChange("shellGap", event.value);
+    });
 
     const stem = pane.addFolder({
       title: "Stem & Leaves",
@@ -507,6 +524,7 @@ export default function StudioDesignPane({
     rootsRef.current = {
       preview: previewRoot,
       outline: outlineRoot,
+      arrangement: arrangementRoot,
       wind: windRoot,
     };
     bindingsRef.current = {
@@ -550,6 +568,7 @@ export default function StudioDesignPane({
         window.setTimeout(() => {
           roots.preview.unmount();
           roots.outline.unmount();
+          roots.arrangement.unmount();
           roots.wind.unmount();
         }, 0);
       }
@@ -570,6 +589,10 @@ export default function StudioDesignPane({
     rootsRef.current?.preview.render(petalPreview);
     rootsRef.current?.outline.render(outlineEditor);
   }, [outlineEditor, petalPreview]);
+
+  useEffect(() => {
+    rootsRef.current?.arrangement.render(arrangementPreview);
+  }, [arrangementPreview]);
 
   useEffect(() => {
     rootsRef.current?.wind.render(windPreview);
