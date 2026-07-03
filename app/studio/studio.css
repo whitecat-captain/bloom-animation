@@ -208,6 +208,36 @@
   max-height: calc(100vh - 48px);
   overflow-y: auto;
   scrollbar-width: none;
+  --tp-base-background-color: #f1eae0;
+  --tp-base-border-radius: 5px;
+  --tp-base-font-family: "Space Mono", ui-monospace, "SFMono-Regular", monospace;
+  --tp-base-shadow-color: rgba(31, 24, 96, 0.18);
+  --tp-blade-border-radius: 5px;
+  /* --tp-blade-horizontal-padding: 8px; */
+  --tp-blade-value-width: 168px;
+  --tp-button-background-color: #2923d6;
+  --tp-button-background-color-active: #1d17ad;
+  --tp-button-background-color-focus: #3a35e4;
+  --tp-button-background-color-hover: #3732e6;
+  --tp-button-foreground-color: #f1eae0;
+  --tp-container-background-color: rgba(41, 35, 214, 0.07);
+  --tp-container-background-color-active: rgba(41, 35, 214, 0.16);
+  --tp-container-background-color-focus: rgba(41, 35, 214, 0.13);
+  --tp-container-background-color-hover: rgba(41, 35, 214, 0.11);
+  --tp-container-foreground-color: #2923d6;
+  /* --tp-container-horizontal-padding: 8px; */
+  /* --tp-container-vertical-padding: 8px; */
+  /* --tp-container-unit-size: 24px; */
+  /* --tp-container-unit-spacing: 6px; */
+  --tp-groove-foreground-color: rgba(41, 35, 214, 0.2);
+  --tp-input-background-color: rgba(255, 251, 245, 0.72);
+  --tp-input-background-color-active: #fffaf3;
+  --tp-input-background-color-focus: #fff7ed;
+  --tp-input-background-color-hover: rgba(255, 251, 245, 0.92);
+  --tp-input-foreground-color: rgba(41, 35, 214, 0.85);
+  --tp-label-foreground-color: rgba(41, 35, 214, 0.85);
+  --tp-monitor-background-color: rgba(41, 35, 214, 0.08);
+  --tp-monitor-foreground-color: rgba(41, 35, 214, 0.85);
 }
 
 .studio-export::-webkit-scrollbar {
@@ -216,6 +246,47 @@
 
 .studio-export > .tp-rotv {
   width: 100%;
+  border: 1px solid rgba(41, 35, 214, 0.22);
+  box-shadow: 0 18px 44px rgba(7, 8, 32, 0.22);
+}
+
+.studio-export .tp-rotv_b,
+.studio-export .tp-fldv_b {
+  font-weight: 700;
+}
+
+.studio-export .tp-btnv_b {
+  font-weight: 700;
+}
+
+.studio-export .tp-lstv_s {
+  -moz-appearance: menulist;
+  -webkit-appearance: menulist;
+  appearance: auto;
+  background-color: var(--tp-input-background-color);
+  color: var(--tp-input-foreground-color);
+  font-weight: 500;
+}
+
+.studio-export .tp-lstv_s:hover {
+  background-color: var(--tp-input-background-color-hover);
+}
+
+.studio-export .tp-lstv_s:focus {
+  background-color: var(--tp-input-background-color-focus);
+}
+
+.studio-export .tp-lstv_s:active {
+  background-color: var(--tp-input-background-color-active);
+}
+
+.studio-export .tp-lstv_m {
+  display: none;
+}
+
+.studio-export .tp-lstv_s option {
+  background-color: initial;
+  color: initial;
 }
 
 @media (max-width: 760px) {
