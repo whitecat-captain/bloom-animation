@@ -17,13 +17,14 @@ import {
 import PetalOutlineEditor from "./PetalOutlineEditor";
 import PetalShapePreview from "./PetalShapePreview";
 import StudioDesignPane, {
+  type AnimationKey,
   type PetalFormKey,
   type PhyllotaxisKey,
   type RenderStyleKey,
+  type StemKey,
   type WindKey,
 } from "./StudioDesignPane";
 import StudioExportPane from "./StudioExportPane";
-import StudioUnifiedSheetDemo from "./StudioUnifiedSheetDemo";
 
 type BgMode = "transparent" | "solid";
 
@@ -73,6 +74,17 @@ const DEFAULT_DESIGN_STATE: FlowerDesignState = {
   },
   renderStyle: {
     flat: true,
+  },
+  animation: {
+    bloom: 0,
+    bloomMax: 0.78,
+    transition: 0.35,
+    animate: false,
+  },
+  stem: {
+    show: true,
+    length: 1.8,
+    leaves: true,
   },
 };
 
@@ -293,6 +305,20 @@ export default function StudioCanvas() {
     sceneRef.current?.setRenderStyle(key, value);
   };
 
+  const handleAnimationChange = <K extends AnimationKey>(
+    key: K,
+    value: FlowerDesignState["animation"][K],
+  ) => {
+    sceneRef.current?.setAnimation(key, value);
+  };
+
+  const handleStemChange = <K extends StemKey>(
+    key: K,
+    value: FlowerDesignState["stem"][K],
+  ) => {
+    sceneRef.current?.setStem(key, value);
+  };
+
   // Target export size from a resolution height, using the live canvas aspect
   // so framing matches the preview. H.264 needs even dimensions.
   const sizeFor = (h: number) => {
@@ -387,8 +413,6 @@ export default function StudioCanvas() {
         <h1 className="studio-title">Bloom Animation Generator</h1>
       </header>
 
-      <StudioUnifiedSheetDemo />
-
       {/* Parameter designer — the engine mounts its tabbed lil-gui here. */}
       <div className="gui-container liquid-glass-strong">
         <div ref={tabsRef} className="gui-tabs" />
@@ -422,6 +446,11 @@ export default function StudioCanvas() {
           onPhyllotaxisChange={handlePhyllotaxisChange}
           onWindChange={handleWindChange}
           onRenderStyleChange={handleRenderStyleChange}
+          onAnimationChange={handleAnimationChange}
+          onPlayAnimation={() => sceneRef.current?.playBloom()}
+          onResetAll={() => sceneRef.current?.resetAll()}
+          onResetPetal={() => sceneRef.current?.resetPetal()}
+          onStemChange={handleStemChange}
           onResetPetalGeometry={() => sceneRef.current?.resetPetalGeometry()}
         />
         <StudioExportPane

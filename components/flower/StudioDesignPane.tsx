@@ -21,10 +21,14 @@ type PetalFormKey =
 type PhyllotaxisKey = keyof FlowerDesignState["phyllotaxis"];
 type WindKey = keyof FlowerDesignState["wind"];
 type RenderStyleKey = keyof FlowerDesignState["renderStyle"];
+type AnimationKey = keyof FlowerDesignState["animation"];
+type StemKey = keyof FlowerDesignState["stem"];
 
 type DesignPaneParams = Pick<PetalShapeState, PetalFormKey> &
   FlowerDesignState["phyllotaxis"] &
   FlowerDesignState["wind"] &
+  FlowerDesignState["animation"] &
+  FlowerDesignState["stem"] &
   FlowerDesignState["renderStyle"] & {
     preset: number;
   };
@@ -41,10 +45,19 @@ type ChangeableBlade<T> = RefreshableBlade & {
 };
 
 type DesignPaneBindings = Record<
-  PetalFormKey | PhyllotaxisKey | WindKey | RenderStyleKey | "preset",
+  | PetalFormKey
+  | PhyllotaxisKey
+  | WindKey
+  | RenderStyleKey
+  | AnimationKey
+  | StemKey
+  | "preset",
   RefreshableBlade
 > & {
   resetButton: ButtonApi;
+  playButton: ButtonApi;
+  resetAllButton: ButtonApi;
+  resetPetalButton: ButtonApi;
 };
 
 type DesignPaneRoots = {
@@ -68,6 +81,17 @@ type StudioDesignPaneProps = {
   onPhyllotaxisChange: (key: PhyllotaxisKey, value: number) => void;
   onWindChange: (key: WindKey, value: number) => void;
   onRenderStyleChange: (key: RenderStyleKey, value: boolean) => void;
+  onAnimationChange: <K extends AnimationKey>(
+    key: K,
+    value: FlowerDesignState["animation"][K],
+  ) => void;
+  onPlayAnimation: () => void;
+  onResetAll: () => void;
+  onResetPetal: () => void;
+  onStemChange: <K extends StemKey>(
+    key: K,
+    value: FlowerDesignState["stem"][K],
+  ) => void;
   onResetPetalGeometry: () => void;
 };
 
@@ -92,6 +116,11 @@ export default function StudioDesignPane({
   onPhyllotaxisChange,
   onWindChange,
   onRenderStyleChange,
+  onAnimationChange,
+  onPlayAnimation,
+  onResetAll,
+  onResetPetal,
+  onStemChange,
   onResetPetalGeometry,
 }: StudioDesignPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -104,6 +133,11 @@ export default function StudioDesignPane({
     onPhyllotaxisChange,
     onWindChange,
     onRenderStyleChange,
+    onAnimationChange,
+    onPlayAnimation,
+    onResetAll,
+    onResetPetal,
+    onStemChange,
     onResetPetalGeometry,
   });
   const paramsRef = useRef<DesignPaneParams>({
@@ -117,6 +151,8 @@ export default function StudioDesignPane({
     ...designState.phyllotaxis,
     ...designState.wind,
     ...designState.renderStyle,
+    ...designState.animation,
+    ...designState.stem,
   });
 
   useEffect(() => {
@@ -126,14 +162,24 @@ export default function StudioDesignPane({
       onPhyllotaxisChange,
       onWindChange,
       onRenderStyleChange,
+      onAnimationChange,
+      onPlayAnimation,
+      onResetAll,
+      onResetPetal,
+      onStemChange,
       onResetPetalGeometry,
     };
   }, [
+    onAnimationChange,
     onPetalFormChange,
     onPhyllotaxisChange,
+    onPlayAnimation,
     onPresetChange,
+    onResetAll,
+    onResetPetal,
     onRenderStyleChange,
     onResetPetalGeometry,
+    onStemChange,
     onWindChange,
   ]);
 
@@ -381,6 +427,71 @@ export default function StudioDesignPane({
       callbacksRef.current.onWindChange("windHeading", event.value);
     });
 
+    const stem = pane.addFolder({
+      title: "Stem & Leaves",
+      expanded: false,
+    });
+    const show = stem.addBinding(params, "show", {
+      label: "Show Stem",
+    }) as ChangeableBlade<boolean>;
+    show.on("change", (event) => {
+      callbacksRef.current.onStemChange("show", event.value);
+    });
+    const length = bindNumber(stem, "length", "Stem Length", 0.8, 3, 0.1);
+    length.on("change", (event) => {
+      callbacksRef.current.onStemChange("length", event.value);
+    });
+    const leaves = stem.addBinding(params, "leaves", {
+      label: "Show Leaves",
+    }) as ChangeableBlade<boolean>;
+    leaves.on("change", (event) => {
+      callbacksRef.current.onStemChange("leaves", event.value);
+    });
+
+    const animation = pane.addFolder({
+      title: "Animation",
+      expanded: false,
+    });
+    const bloom = bindNumber(animation, "bloom", "Bloom Progress", 0, 1, 0.01, 2);
+    bloom.on("change", (event) => {
+      callbacksRef.current.onAnimationChange("bloom", event.value);
+    });
+    const bloomMax = bindNumber(animation, "bloomMax", "Bloom Limit", 0.5, 1, 0.01, 2);
+    bloomMax.on("change", (event) => {
+      callbacksRef.current.onAnimationChange("bloomMax", event.value);
+    });
+    const transition = bindNumber(
+      animation,
+      "transition",
+      "Propagation Width",
+      0.05,
+      1,
+      0.01,
+      2,
+    );
+    transition.on("change", (event) => {
+      callbacksRef.current.onAnimationChange("transition", event.value);
+    });
+    const animate = animation.addBinding(params, "animate", {
+      label: "Auto-Animate",
+    }) as ChangeableBlade<boolean>;
+    animate.on("change", (event) => {
+      callbacksRef.current.onAnimationChange("animate", event.value);
+    });
+    const playButton = animation.addButton({ title: "Play" });
+    playButton.on("click", () => {
+      callbacksRef.current.onPlayAnimation();
+    });
+
+    const resetAllButton = pane.addButton({ title: "Reset All" });
+    resetAllButton.on("click", () => {
+      callbacksRef.current.onResetAll();
+    });
+    const resetPetalButton = pane.addButton({ title: "Reset Petal" });
+    resetPetalButton.on("click", () => {
+      callbacksRef.current.onResetPetal();
+    });
+
     paneRef.current = pane;
     bindingsRef.current = {
       preset,
@@ -409,6 +520,16 @@ export default function StudioDesignPane({
       windAmp,
       windSpeed,
       windHeading,
+      show,
+      length,
+      leaves,
+      bloom,
+      bloomMax,
+      transition,
+      animate,
+      playButton,
+      resetAllButton,
+      resetPetalButton,
     };
 
     return () => {
@@ -443,6 +564,8 @@ export default function StudioDesignPane({
     Object.assign(params, designState.phyllotaxis);
     Object.assign(params, designState.wind);
     Object.assign(params, designState.renderStyle);
+    Object.assign(params, designState.animation);
+    Object.assign(params, designState.stem);
 
     const bindings = bindingsRef.current;
     if (!bindings) return;
@@ -455,4 +578,11 @@ export default function StudioDesignPane({
   return <aside ref={containerRef} className="studio-design-pane" />;
 }
 
-export type { PetalFormKey, PhyllotaxisKey, WindKey, RenderStyleKey };
+export type {
+  AnimationKey,
+  PetalFormKey,
+  PhyllotaxisKey,
+  WindKey,
+  RenderStyleKey,
+  StemKey,
+};

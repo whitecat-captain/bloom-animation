@@ -136,19 +136,6 @@
 .studio-design-pane::-webkit-scrollbar {
   display: none;
 }
-.studio-unified-demo {
-  position: fixed;
-  top: 66px;
-  left: 24px;
-  z-index: 14;
-  width: 320px;
-  max-height: calc(100vh - 90px);
-  overflow-y: auto;
-  scrollbar-width: none;
-}
-.studio-unified-demo::-webkit-scrollbar {
-  display: none;
-}
 /* Transparent mode: checkerboard shows through the alpha-cleared canvas. */
 .studio-stage.is-transparent {
   background-color: #1b1d24;
@@ -250,8 +237,7 @@
 }
 
 .studio-export,
-.studio-design-pane,
-.studio-unified-demo {
+.studio-design-pane {
   --tp-base-background-color: #f1eae0;
   --tp-base-border-radius: 5px;
   --tp-base-font-family: "Space Mono", ui-monospace, "SFMono-Regular", monospace;
@@ -298,30 +284,25 @@
 }
 
 .studio-export > .tp-rotv,
-.studio-design-pane > .tp-rotv,
-.studio-unified-demo > .tp-rotv {
+.studio-design-pane > .tp-rotv {
   width: 100%;
   border: 1px solid rgba(41, 35, 214, 0.22);
 }
 
 .studio-export > .tp-rotv,
-.studio-design-pane > .tp-rotv,
-.studio-unified-demo > .tp-rotv {
+.studio-design-pane > .tp-rotv {
   box-shadow: 0 18px 44px rgba(7, 8, 32, 0.22);
 }
 
 .studio-export .tp-rotv_b,
 .studio-export .tp-fldv_b,
 .studio-design-pane .tp-rotv_b,
-.studio-design-pane .tp-fldv_b,
-.studio-unified-demo .tp-rotv_b,
-.studio-unified-demo .tp-fldv_b {
+.studio-design-pane .tp-fldv_b {
   font-weight: 700;
 }
 
 .studio-export .tp-btnv_b,
-.studio-design-pane .tp-btnv_b,
-.studio-unified-demo .tp-btnv_b {
+.studio-design-pane .tp-btnv_b {
   font-weight: 700;
 }
 
@@ -499,8 +480,7 @@
 }
 
 .studio-export .tp-lstv_s,
-.studio-design-pane .tp-lstv_s,
-.studio-unified-demo .tp-lstv_s {
+.studio-design-pane .tp-lstv_s {
   -moz-appearance: menulist;
   -webkit-appearance: menulist;
   appearance: auto;
@@ -510,32 +490,27 @@
 }
 
 .studio-export .tp-lstv_s:hover,
-.studio-design-pane .tp-lstv_s:hover,
-.studio-unified-demo .tp-lstv_s:hover {
+.studio-design-pane .tp-lstv_s:hover {
   background-color: var(--tp-input-background-color-hover);
 }
 
 .studio-export .tp-lstv_s:focus,
-.studio-design-pane .tp-lstv_s:focus,
-.studio-unified-demo .tp-lstv_s:focus {
+.studio-design-pane .tp-lstv_s:focus {
   background-color: var(--tp-input-background-color-focus);
 }
 
 .studio-export .tp-lstv_s:active,
-.studio-design-pane .tp-lstv_s:active,
-.studio-unified-demo .tp-lstv_s:active {
+.studio-design-pane .tp-lstv_s:active {
   background-color: var(--tp-input-background-color-active);
 }
 
 .studio-export .tp-lstv_m,
-.studio-design-pane .tp-lstv_m,
-.studio-unified-demo .tp-lstv_m {
+.studio-design-pane .tp-lstv_m {
   display: none;
 }
 
 .studio-export .tp-lstv_s option,
-.studio-design-pane .tp-lstv_s option,
-.studio-unified-demo .tp-lstv_s option {
+.studio-design-pane .tp-lstv_s option {
   background-color: initial;
   color: initial;
 }
@@ -561,9 +536,6 @@
   }
   .studio-design-pane {
     flex-basis: 22vh;
-  }
-  .studio-unified-demo {
-    display: none;
   }
   .studio-head {
     top: 16px;

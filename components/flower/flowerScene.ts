@@ -57,6 +57,17 @@ export type FlowerDesignState = {
   renderStyle: {
     flat: boolean;
   };
+  animation: {
+    bloom: number;
+    bloomMax: number;
+    transition: number;
+    animate: boolean;
+  };
+  stem: {
+    show: boolean;
+    length: number;
+    leaves: boolean;
+  };
 };
 
 type FlowerSceneOptions = {
@@ -193,6 +204,7 @@ export function createFlowerScene(
   const notifyPetalShapeChange = () => {
     options.onPetalShapeChange?.(petalShapeState());
   };
+  const stemParams = { show: true, length: 1.8, leaves: true };
   const designState = (): FlowerDesignState => ({
     phyllotaxis: {
       numPetals: params.numPetals,
@@ -218,9 +230,27 @@ export function createFlowerScene(
     renderStyle: {
       flat: params.flat,
     },
+    animation: {
+      bloom: params.bloom,
+      bloomMax: params.bloomMax,
+      transition: params.transition,
+      animate: params.animate,
+    },
+    stem: {
+      show: stemParams.show,
+      length: stemParams.length,
+      leaves: stemParams.leaves,
+    },
   });
   const notifyDesignStateChange = () => {
     options.onDesignStateChange?.(designState());
+  };
+  let lastAnimationStateNotify = 0;
+  const notifyAnimationStateChange = () => {
+    const now = performance.now();
+    if (now - lastAnimationStateNotify < 100) return;
+    lastAnimationStateNotify = now;
+    notifyDesignStateChange();
   };
 
   const uniforms = {
@@ -562,7 +592,6 @@ void main() {
   // ===== Stem & leaves =====
   // Flat-green stem + leaves, tuned for the flat tone-shading look. Parented to
   // flowerGroup so the whole plant turns together with the scroll rotation.
-  const stemParams = { show: true, length: 1.8, leaves: true };
   const stemMat = new THREE.MeshBasicMaterial({
     color: 0x2f7d34,
     side: THREE.DoubleSide,
@@ -572,6 +601,8 @@ void main() {
     side: THREE.DoubleSide,
   });
   let stemGroup: THREE.Group | null = null;
+  let animationCtrls: Array<{ updateDisplay: () => void }> = [];
+  let stemCtrls: Array<{ updateDisplay: () => void }> = [];
 
   function makeLeafGeometry() {
     const s = new THREE.Shape();
@@ -590,7 +621,10 @@ void main() {
       });
       stemGroup = null;
     }
-    if (!stemParams.show) return;
+    if (!stemParams.show) {
+      notifyDesignStateChange();
+      return;
+    }
 
     stemGroup = new THREE.Group();
     const L = stemParams.length;
@@ -627,6 +661,7 @@ void main() {
       }
     }
     flowerGroup.add(stemGroup);
+    notifyDesignStateChange();
   }
   buildStem();
 
@@ -759,10 +794,28 @@ void main() {
   fDetail.close();
 
   const fAnim = gui.addFolder("Animation");
-  fAnim.add(params, "bloom", 0, 1).name("Bloom Progress").onChange(applyBloom).listen();
-  fAnim.add(params, "bloomMax", 0.5, 1).name("Bloom Limit");
-  fAnim.add(params, "transition", 0.05, 1).name("Propagation Width").onChange(U("uTransition"));
-  fAnim.add(params, "animate").name("Auto-Animate");
+  animationCtrls = [
+    fAnim
+      .add(params, "bloom", 0, 1)
+      .name("Bloom Progress")
+      .onChange((v: number) => {
+        applyBloom(v);
+        notifyDesignStateChange();
+      })
+      .listen(),
+    fAnim
+      .add(params, "bloomMax", 0.5, 1)
+      .name("Bloom Limit")
+      .onChange(() => notifyDesignStateChange()),
+    fAnim
+      .add(params, "transition", 0.05, 1)
+      .name("Propagation Width")
+      .onChange(U("uTransition")),
+    fAnim
+      .add(params, "animate")
+      .name("Auto-Animate")
+      .onChange(() => notifyDesignStateChange()),
+  ];
   // One-shot bloom playback, independent of the Auto-Animate loop.
   let playStart: number | null = null;
   fAnim
@@ -785,13 +838,35 @@ void main() {
     phyllotaxisCtrls.forEach((ctrl) => ctrl.updateDisplay());
     windCtrls.forEach((ctrl) => ctrl.updateDisplay());
     renderStyleCtrls.forEach((ctrl) => ctrl.updateDisplay());
+    animationCtrls.forEach((ctrl) => ctrl.updateDisplay());
+    stemCtrls.forEach((ctrl) => ctrl.updateDisplay());
   };
 
   const fStem = gui.addFolder("Stem & Leaves");
-  fStem.add(stemParams, "show").name("Show Stem").onChange(buildStem);
-  fStem.add(stemParams, "length", 0.8, 3).name("Stem Length").onChange(buildStem);
-  fStem.add(stemParams, "leaves").name("Show Leaves").onChange(buildStem);
+  stemCtrls = [
+    fStem.add(stemParams, "show").name("Show Stem").onChange(buildStem),
+    fStem.add(stemParams, "length", 0.8, 3).name("Stem Length").onChange(buildStem),
+    fStem.add(stemParams, "leaves").name("Show Leaves").onChange(buildStem),
+  ];
   fStem.close();
+
+  // Reset every control to its default, then leave the flower fully bloomed
+  // (its final state) rather than closed back to the bud.
+  const resetAllDesign = () => {
+    gui.reset();
+    params.bloom = params.bloomMax;
+    applyBloom(params.bloom);
+    refreshDesignControllers();
+    notifyPetalShapeChange();
+    notifyDesignStateChange();
+  };
+
+  // Same as Reset All, but also drops the flower to the minimum petal count
+  // so a single petal is easy to study.
+  const resetPetalView = () => {
+    resetAllDesign();
+    numPetalsCtrl.setValue(PETAL_MIN); // rebuilds via onChange + syncs display
+  };
 
   // ===== Tabbed panel =====
   // The left "Option Tab" rail drives which folder's controls the right
@@ -822,30 +897,18 @@ void main() {
       tabsContainer.appendChild(btn);
       tabButtons.push(btn);
     });
-    // Reset every control to its default, then leave the flower fully bloomed
-    // (its final state) rather than closed back to the bud.
-    const resetAll = () => {
-      gui.reset();
-      params.bloom = params.bloomMax;
-      applyBloom(params.bloom);
-    };
     const resetBtn = document.createElement("button");
     resetBtn.type = "button";
     resetBtn.className = "demo-chip demo-chip--reset gui-reset";
     resetBtn.textContent = "↺ Reset";
-    resetBtn.addEventListener("click", resetAll);
+    resetBtn.addEventListener("click", resetAllDesign);
     tabsContainer.appendChild(resetBtn);
 
-    // Same as Reset All, but also drops the flower to the minimum petal count
-    // so a single petal is easy to study.
     const petalReset = document.createElement("button");
     petalReset.type = "button";
     petalReset.className = "demo-chip demo-chip--reset gui-section-reset";
     petalReset.textContent = "↺ Reset Petal";
-    petalReset.addEventListener("click", () => {
-      resetAll();
-      numPetalsCtrl.setValue(PETAL_MIN); // rebuilds via onChange + syncs display
-    });
+    petalReset.addEventListener("click", resetPetalView);
     tabsContainer.appendChild(petalReset);
 
     // These two are presenter-only: keep them hidden and reveal the pair only
@@ -906,10 +969,12 @@ void main() {
       const t = clock.getElapsedTime() % 11;
       params.bloom = easedBloom(t / BLOOM_DURATION_S);
       applyBloom(params.bloom);
+      notifyAnimationStateChange();
     } else if (playStart !== null) {
       const t = clock.getElapsedTime() - playStart;
       params.bloom = easedBloom(t / BLOOM_DURATION_S);
       applyBloom(params.bloom);
+      notifyAnimationStateChange();
       if (t >= BLOOM_DURATION_S) playStart = null;
     }
     controls.update();
@@ -926,6 +991,8 @@ void main() {
       if (params.animate) return;
       params.bloom = v;
       applyBloom(v);
+      refreshDesignControllers();
+      notifyAnimationStateChange();
     },
     /** Scroll-driven turntable rotation of the whole flower. */
     setRotation(y: number) {
@@ -1131,6 +1198,12 @@ void main() {
     resetPetalGeometry() {
       resetPetalGeometryParams();
     },
+    resetAll() {
+      resetAllDesign();
+    },
+    resetPetal() {
+      resetPetalView();
+    },
     /** Flat tone-shading vs. soft Lambert + subsurface lighting. */
     setFlat(on: boolean) {
       params.flat = on;
@@ -1148,6 +1221,40 @@ void main() {
       }
       refreshDesignControllers();
       notifyDesignStateChange();
+    },
+    setAnimation<K extends keyof FlowerDesignState["animation"]>(
+      key: K,
+      value: FlowerDesignState["animation"][K],
+    ) {
+      if (key === "bloom") {
+        params.bloom = THREE.MathUtils.clamp(Number(value), 0, 1);
+        applyBloom(params.bloom);
+      } else if (key === "bloomMax") {
+        params.bloomMax = THREE.MathUtils.clamp(Number(value), 0.5, 1);
+        params.bloom = Math.min(params.bloom, params.bloomMax);
+        applyBloom(params.bloom);
+      } else if (key === "transition") {
+        params.transition = THREE.MathUtils.clamp(Number(value), 0.05, 1);
+        uniforms.uTransition.value = params.transition;
+      } else if (key === "animate") {
+        params.animate = Boolean(value);
+      }
+      refreshDesignControllers();
+      notifyDesignStateChange();
+    },
+    setStem<K extends keyof FlowerDesignState["stem"]>(
+      key: K,
+      value: FlowerDesignState["stem"][K],
+    ) {
+      if (key === "show") {
+        stemParams.show = Boolean(value);
+      } else if (key === "length") {
+        stemParams.length = THREE.MathUtils.clamp(Number(value), 0.8, 3);
+      } else if (key === "leaves") {
+        stemParams.leaves = Boolean(value);
+      }
+      refreshDesignControllers();
+      buildStem();
     },
     /** Recolour the five-stop petal ramp (cold rim -> hot core), each [r,g,b]. */
     setPalette(stops: [number, number, number][]) {
@@ -1176,6 +1283,7 @@ void main() {
     setStemVisible(show: boolean) {
       if (stemParams.show === show) return;
       stemParams.show = show;
+      refreshDesignControllers();
       buildStem();
     },
     bloomMax: params.bloomMax,
