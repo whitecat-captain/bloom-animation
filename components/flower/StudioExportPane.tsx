@@ -282,6 +282,7 @@ export default function StudioExportPane({
     }) as RefreshableBlade;
 
     const playButton = video.addButton({ title: "Play Preview" });
+    playButton.element.classList.add("studio-export-preview-button");
     playButton.on("click", () => {
       callbacksRef.current.onTogglePlay();
     });
