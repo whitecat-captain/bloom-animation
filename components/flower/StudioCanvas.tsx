@@ -166,6 +166,8 @@ export default function StudioCanvas() {
   const [previewTime, setPreviewTime] = useState(0);
   const [sheetPages, setSheetPages] = useState<StudioSheetPages | null>(null);
   const [petalPreviewResetKey, setPetalPreviewResetKey] = useState(0);
+  const [arrangementPreviewResetKey, setArrangementPreviewResetKey] = useState(0);
+  const [windPreviewResetKey, setWindPreviewResetKey] = useState(0);
 
   // Duration is the export clip length. Bloom speed stays fixed to the scene's
   // bloomDuration; Preview loops that exact export-length segment until exited.
@@ -461,10 +463,12 @@ export default function StudioCanvas() {
 
   function handleResetArrangement() {
     sceneRef.current?.resetArrangement();
+    setArrangementPreviewResetKey((key) => key + 1);
   }
 
   function handleResetWind() {
     sceneRef.current?.resetWind();
+    setWindPreviewResetKey((key) => key + 1);
   }
 
   function handleResetNaturalDetail() {
@@ -500,8 +504,13 @@ export default function StudioCanvas() {
   );
   const { windAmp, windSpeed, windHeading } = designState.wind;
   const windPreview = useMemo(
-    () => <WindPreview wind={{ windAmp, windSpeed, windHeading }} />,
-    [windAmp, windSpeed, windHeading],
+    () => (
+      <WindPreview
+        wind={{ windAmp, windSpeed, windHeading }}
+        resetViewKey={windPreviewResetKey}
+      />
+    ),
+    [windAmp, windSpeed, windHeading, windPreviewResetKey],
   );
   const {
     numPetals,
@@ -531,6 +540,7 @@ export default function StudioCanvas() {
           tiltBias,
         }}
         palette={palette}
+        resetViewKey={arrangementPreviewResetKey}
       />
     ),
     [
@@ -545,6 +555,7 @@ export default function StudioCanvas() {
       outAngle,
       tiltBias,
       palette,
+      arrangementPreviewResetKey,
     ],
   );
 

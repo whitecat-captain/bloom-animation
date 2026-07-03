@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { FlowerDesignState } from "./flowerScene";
@@ -39,16 +39,29 @@ function makePetalProxyGeometry() {
 export default function PhyllotaxisPreview({
   layout,
   palette,
+  resetViewKey,
 }: {
   layout: LayoutState;
   palette: PaletteStops;
+  resetViewKey?: number;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
   const meshRef = useRef<THREE.InstancedMesh | null>(null);
   const geometryRef = useRef<THREE.BufferGeometry | null>(null);
   const materialRef = useRef<THREE.Material | null>(null);
   const drawRef = useRef<(() => void) | null>(null);
+
+  const resetPreviewView = useCallback(() => {
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    if (!camera || !controls) return;
+    camera.position.copy(DEFAULT_CAMERA_POSITION);
+    controls.target.copy(DEFAULT_CONTROLS_TARGET);
+    controls.update();
+  }, []);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -63,11 +76,16 @@ export default function PhyllotaxisPreview({
     const camera = new THREE.PerspectiveCamera(34, 1, 0.01, 20);
     camera.position.copy(DEFAULT_CAMERA_POSITION);
     const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
+    // Damping lags the drag and coasts on release; zoom hijacks page scroll
+    // when the pointer passes over the box — both unwanted for a tiny preview.
+    controls.enableDamping = false;
     controls.enablePan = false;
+    controls.enableZoom = false;
     controls.minDistance = 0.7;
     controls.maxDistance = 3.6;
     controls.target.copy(DEFAULT_CONTROLS_TARGET);
+    cameraRef.current = camera;
+    controlsRef.current = controls;
 
     const ground = new THREE.PolarGridHelper(0.9, 8, 3, 48, 0x2a3ba8, 0x1d2a74);
     (ground.material as THREE.LineBasicMaterial).transparent = true;
@@ -132,12 +150,18 @@ export default function PhyllotaxisPreview({
       renderer.dispose();
       host.removeChild(renderer.domElement);
       sceneRef.current = null;
+      cameraRef.current = null;
+      controlsRef.current = null;
       meshRef.current = null;
       geometryRef.current = null;
       materialRef.current = null;
       drawRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    resetPreviewView();
+  }, [resetPreviewView, resetViewKey]);
 
   // Same placement maths as flowerScene's buildFlower (spiral path, no
   // jitter): golden-angle spiral over a dome, inner petals smaller and more

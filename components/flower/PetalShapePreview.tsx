@@ -212,8 +212,11 @@ export default function PetalShapePreview({
     const camera = new THREE.PerspectiveCamera(34, 1, 0.01, 20);
     camera.position.copy(DEFAULT_CAMERA_POSITION);
     const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
+    // Damping lags the drag and coasts on release; zoom hijacks page scroll
+    // when the pointer passes over the box — both unwanted for a tiny preview.
+    controls.enableDamping = false;
     controls.enablePan = false;
+    controls.enableZoom = false;
     controls.minDistance = 0.75;
     controls.maxDistance = 3.2;
     controls.target.copy(DEFAULT_CONTROLS_TARGET);

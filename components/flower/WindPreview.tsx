@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { FlowerDesignState } from "./flowerScene";
@@ -95,13 +95,30 @@ function stalkBases() {
   return bases;
 }
 
-export default function WindPreview({ wind }: { wind: WindState }) {
+export default function WindPreview({
+  wind,
+  resetViewKey,
+}: {
+  wind: WindState;
+  resetViewKey?: number;
+}) {
   const hostRef = useRef<HTMLDivElement>(null);
   const windRef = useRef<WindState>(wind);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
 
   useEffect(() => {
     windRef.current = wind;
   }, [wind]);
+
+  const resetPreviewView = useCallback(() => {
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    if (!camera || !controls) return;
+    camera.position.copy(DEFAULT_CAMERA_POSITION);
+    controls.target.copy(DEFAULT_CONTROLS_TARGET);
+    controls.update();
+  }, []);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -116,11 +133,16 @@ export default function WindPreview({ wind }: { wind: WindState }) {
     const camera = new THREE.PerspectiveCamera(34, 1, 0.01, 20);
     camera.position.copy(DEFAULT_CAMERA_POSITION);
     const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
+    // Damping lags the drag and coasts on release; zoom hijacks page scroll
+    // when the pointer passes over the box — both unwanted for a tiny preview.
+    controls.enableDamping = false;
     controls.enablePan = false;
+    controls.enableZoom = false;
     controls.minDistance = 0.9;
     controls.maxDistance = 3.6;
     controls.target.copy(DEFAULT_CONTROLS_TARGET);
+    cameraRef.current = camera;
+    controlsRef.current = controls;
 
     const ground = new THREE.PolarGridHelper(0.92, 8, 3, 48, 0x2a3ba8, 0x1d2a74);
     (ground.material as THREE.LineBasicMaterial).transparent = true;
@@ -306,8 +328,14 @@ export default function WindPreview({ wind }: { wind: WindState }) {
       streakMaterial.dispose();
       renderer.dispose();
       host.removeChild(renderer.domElement);
+      cameraRef.current = null;
+      controlsRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    resetPreviewView();
+  }, [resetPreviewView, resetViewKey]);
 
   return (
     <div
