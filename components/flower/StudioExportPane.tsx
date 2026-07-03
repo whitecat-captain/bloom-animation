@@ -264,6 +264,8 @@ export default function StudioExportPane({
     const previewTimeBinding = video.addBinding(params, "previewTime", {
       label: "Time",
       readonly: true,
+      // Manual ticker — the refresh effect drives updates; no idle polling.
+      interval: 0,
       format: (value) => `${value.toFixed(1)}s`,
     }) as RefreshableBlade;
 
@@ -276,6 +278,7 @@ export default function StudioExportPane({
     const transparentOutput = video.addBinding(params, "transparentOutput", {
       label: "Alpha",
       readonly: true,
+      interval: 0,
       view: "text",
     }) as RefreshableBlade;
 
@@ -287,6 +290,7 @@ export default function StudioExportPane({
     const progressBinding = video.addBinding(params, "progress", {
       label: "Progress",
       readonly: true,
+      interval: 0,
       min: 0,
       max: 100,
       format: (value) => `${value.toFixed(0)}%`,
@@ -309,14 +313,17 @@ export default function StudioExportPane({
     controls.addBinding(params, "orbitControl", {
       label: "Orbit",
       readonly: true,
+      interval: 0,
     });
     controls.addBinding(params, "panControl", {
       label: "Pan",
       readonly: true,
+      interval: 0,
     });
     controls.addBinding(params, "zoomControl", {
       label: "Zoom",
       readonly: true,
+      interval: 0,
     });
 
     paneRef.current = pane;
@@ -360,44 +367,63 @@ export default function StudioExportPane({
 
   useEffect(() => {
     const params = paramsRef.current;
-    params.color = color;
-    params.imageRes = imageRes;
-    params.videoRes = videoRes;
-    params.duration = duration;
-    params.previewTime = previewTime;
-    params.progress = Math.round(progress * 100);
-
     const bindings = bindingsRef.current;
     if (!bindings) return;
 
-    bindings.color.refresh();
-    bindings.imageRes.refresh();
-    bindings.videoRes.refresh();
-    bindings.duration.refresh();
-    bindings.previewTime.refresh();
-    bindings.progress.refresh();
+    // Refresh only bindings whose value changed — previewTime ticks 10x/s
+    // during playback and would otherwise drag every input with it.
+    const sync = (
+      key: "color" | "imageRes" | "videoRes" | "duration" | "previewTime" | "progress",
+      value: string | number,
+    ) => {
+      if (Object.is(params[key], value)) return;
+      params[key] = value as never;
+      bindings[key].refresh();
+    };
+    sync("color", color);
+    sync("imageRes", imageRes);
+    sync("videoRes", videoRes);
+    sync("duration", duration);
+    sync("previewTime", previewTime);
+    sync("progress", Math.round(progress * 100));
 
-    bindings.color.hidden = bgMode !== "solid";
-    bindings.transparentOutput.hidden = bgMode !== "transparent";
-    bindings.progress.hidden = exportKind !== "video";
+    const setHidden = (blade: RefreshableBlade, hidden: boolean) => {
+      if (blade.hidden !== hidden) blade.hidden = hidden;
+    };
+    setHidden(bindings.color, bgMode !== "solid");
+    setHidden(bindings.transparentOutput, bgMode !== "transparent");
+    setHidden(bindings.progress, exportKind !== "video");
 
-    bindings.imageRes.disabled = exporting;
-    bindings.videoRes.disabled = exporting;
-    bindings.duration.disabled = exporting;
-    bindings.previewTime.disabled = exporting;
-    bindings.imageButton.disabled = exporting;
-    bindings.playButton.disabled = exporting;
-    bindings.videoButton.disabled = exporting;
+    const setDisabled = (
+      blade: RefreshableBlade | ButtonApi,
+      disabled: boolean,
+    ) => {
+      if (blade.disabled !== disabled) blade.disabled = disabled;
+    };
+    setDisabled(bindings.imageRes, exporting);
+    setDisabled(bindings.videoRes, exporting);
+    setDisabled(bindings.duration, exporting);
+    setDisabled(bindings.previewTime, exporting);
+    setDisabled(bindings.imageButton, exporting);
+    setDisabled(bindings.playButton, exporting);
+    setDisabled(bindings.videoButton, exporting);
 
-    bindings.imageButton.title =
-      exportKind === "image" ? "Exporting..." : "Export Image";
-    bindings.playButton.title = playing ? "Exit Preview" : "Play Preview";
-    bindings.videoButton.title =
+    const setTitle = (button: ButtonApi, title: string) => {
+      if (button.title !== title) button.title = title;
+    };
+    setTitle(
+      bindings.imageButton,
+      exportKind === "image" ? "Exporting..." : "Export Image",
+    );
+    setTitle(bindings.playButton, playing ? "Exit Preview" : "Play Preview");
+    setTitle(
+      bindings.videoButton,
       exportKind === "video"
         ? `Rendering... ${Math.round(progress * 100)}%`
         : bgMode === "solid"
           ? "Export Video"
-          : "Export PNG Sequence";
+          : "Export PNG Sequence",
+    );
   }, [
     bgMode,
     color,

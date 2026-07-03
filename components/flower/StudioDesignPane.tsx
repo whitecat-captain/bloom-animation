@@ -485,6 +485,8 @@ export default function StudioDesignPane({
     const previewTimeBinding = animationPreview.addBinding(params, "previewTime", {
       label: "Time",
       readonly: true,
+      // Manual ticker — the refresh effect drives updates; no idle polling.
+      interval: 0,
       format: (value) => `${value.toFixed(1)}s`,
     }) as RefreshableBlade;
     const playPreviewButton = animationPreview.addButton({
@@ -575,30 +577,43 @@ export default function StudioDesignPane({
 
   useEffect(() => {
     const params = paramsRef.current;
-    params.preset = selectedPreset;
-    params.duration = duration;
-    params.previewTime = previewTime;
-    params.curlOpen = shape.curlOpen;
-    params.curlBias = shape.curlBias;
-    params.cup = shape.cup;
-    params.sideCurl = shape.sideCurl;
-    params.waveAmp = shape.waveAmp;
-    params.asym = shape.asym;
-    Object.assign(params, designState.phyllotaxis);
-    Object.assign(params, designState.wind);
-    Object.assign(params, designState.renderStyle);
-    Object.assign(params, designState.stem);
-
     const bindings = bindingsRef.current;
+    const next: DesignPaneParams = {
+      preset: selectedPreset,
+      duration,
+      previewTime,
+      curlOpen: shape.curlOpen,
+      curlBias: shape.curlBias,
+      cup: shape.cup,
+      sideCurl: shape.sideCurl,
+      waveAmp: shape.waveAmp,
+      asym: shape.asym,
+      ...designState.phyllotaxis,
+      ...designState.wind,
+      ...designState.renderStyle,
+      ...designState.stem,
+    };
+
+    // Refresh only the bindings whose value actually changed — a full-pane
+    // refresh here would touch ~30 DOM inputs 10x/s during preview playback.
+    for (const key of Object.keys(next) as Array<keyof DesignPaneParams>) {
+      if (Object.is(params[key], next[key])) continue;
+      params[key] = next[key] as never;
+      const binding = bindings?.[key];
+      if (binding && "refresh" in binding) binding.refresh();
+    }
+
     if (!bindings) return;
-
-    Object.values(bindings).forEach((binding) => {
-      if ("refresh" in binding) binding.refresh();
-    });
-
-    bindings.duration.disabled = exporting;
-    bindings.playPreviewButton.disabled = exporting;
-    bindings.playPreviewButton.title = playing ? "Exit Preview" : "Play Preview";
+    const playTitle = playing ? "Exit Preview" : "Play Preview";
+    if (bindings.playPreviewButton.title !== playTitle) {
+      bindings.playPreviewButton.title = playTitle;
+    }
+    if (bindings.duration.disabled !== exporting) {
+      bindings.duration.disabled = exporting;
+    }
+    if (bindings.playPreviewButton.disabled !== exporting) {
+      bindings.playPreviewButton.disabled = exporting;
+    }
   }, [designState, duration, exporting, playing, previewTime, selectedPreset, shape]);
 
   return null;

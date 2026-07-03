@@ -5,7 +5,12 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { FlowerDesignState } from "./flowerScene";
 
-type WindState = FlowerDesignState["wind"];
+// Only the parameters the demo visualises — a narrow prop keeps the parent's
+// memoisation simple (unrelated wind params don't re-render this).
+type WindState = Pick<
+  FlowerDesignState["wind"],
+  "windAmp" | "windSpeed" | "windHeading"
+>;
 
 const DEFAULT_CAMERA_POSITION = new THREE.Vector3(1.35, 1.05, 1.35);
 const DEFAULT_CONTROLS_TARGET = new THREE.Vector3(0, 0.3, 0);

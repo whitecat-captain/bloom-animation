@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pane, type TabPageApi } from "tweakpane";
 import {
   createFlowerScene,
@@ -289,15 +289,41 @@ export default function StudioCanvas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bgMode, color]);
 
-  const handlePetalOutlineChange = ({
-    petalLen,
-    widths,
-  }: {
-    petalLen: number;
-    widths: [number, number, number, number];
-  }) => {
-    sceneRef.current?.setPetalOutline(petalLen, widths);
-  };
+  const handlePetalOutlineChange = useCallback(
+    ({
+      petalLen,
+      widths,
+    }: {
+      petalLen: number;
+      widths: [number, number, number, number];
+    }) => {
+      sceneRef.current?.setPetalOutline(petalLen, widths);
+    },
+    [],
+  );
+
+  // Rebuild-triggering setters (phyllotaxis, jitter, stem) regenerate the
+  // whole mesh; coalesce drag events so at most one rebuild runs per frame.
+  const pendingSceneOpsRef = useRef(new Map<string, () => void>());
+  const sceneOpRafRef = useRef<number | null>(null);
+  const scheduleSceneOp = useCallback((key: string, op: () => void) => {
+    pendingSceneOpsRef.current.set(key, op);
+    if (sceneOpRafRef.current !== null) return;
+    sceneOpRafRef.current = requestAnimationFrame(() => {
+      sceneOpRafRef.current = null;
+      const ops = [...pendingSceneOpsRef.current.values()];
+      pendingSceneOpsRef.current.clear();
+      ops.forEach((run) => run());
+    });
+  }, []);
+  useEffect(
+    () => () => {
+      if (sceneOpRafRef.current !== null) {
+        cancelAnimationFrame(sceneOpRafRef.current);
+      }
+    },
+    [],
+  );
 
   const handlePetalFormChange = (key: PetalFormKey, value: number) => {
     const scene = sceneRef.current;
@@ -326,10 +352,18 @@ export default function StudioCanvas() {
   };
 
   const handlePhyllotaxisChange = (key: PhyllotaxisKey, value: number) => {
-    sceneRef.current?.setPhyllotaxis(key, value);
+    scheduleSceneOp(`phyllotaxis:${key}`, () =>
+      sceneRef.current?.setPhyllotaxis(key, value),
+    );
   };
 
   const handleWindChange = (key: WindKey, value: number) => {
+    if (key === "jitter") {
+      scheduleSceneOp("wind:jitter", () =>
+        sceneRef.current?.setWind(key, value),
+      );
+      return;
+    }
     sceneRef.current?.setWind(key, value);
   };
 
@@ -341,6 +375,12 @@ export default function StudioCanvas() {
     key: K,
     value: FlowerDesignState["stem"][K],
   ) => {
+    if (key === "length") {
+      scheduleSceneOp("stem:length", () =>
+        sceneRef.current?.setStem(key, value),
+      );
+      return;
+    }
     sceneRef.current?.setStem(key, value);
   };
 
@@ -423,6 +463,35 @@ export default function StudioCanvas() {
     setDuration(nextDuration);
   }
 
+  // Memoised embedded-React nodes: the sheet re-renders 10x/s during preview
+  // playback, and a fresh element would re-render each pane-hosted root.
+  const palette = PRESETS[selectedPreset].stops;
+  const outlineEditor = useMemo(
+    () => (
+      <PetalOutlineEditor
+        shape={petalShape}
+        palette={palette}
+        onOutlineChange={handlePetalOutlineChange}
+      />
+    ),
+    [handlePetalOutlineChange, palette, petalShape],
+  );
+  const petalPreview = useMemo(
+    () => (
+      <PetalShapePreview
+        shape={petalShape}
+        palette={palette}
+        resetViewKey={petalPreviewResetKey}
+      />
+    ),
+    [palette, petalShape, petalPreviewResetKey],
+  );
+  const { windAmp, windSpeed, windHeading } = designState.wind;
+  const windPreview = useMemo(
+    () => <WindPreview wind={{ windAmp, windSpeed, windHeading }} />,
+    [windAmp, windSpeed, windHeading],
+  );
+
   return (
     <div className="studio">
       <div
@@ -456,21 +525,9 @@ export default function StudioCanvas() {
               designState={designState}
               presets={PRESETS}
               selectedPreset={selectedPreset}
-              outlineEditor={
-                <PetalOutlineEditor
-                  shape={petalShape}
-                  palette={PRESETS[selectedPreset].stops}
-                  onOutlineChange={handlePetalOutlineChange}
-                />
-              }
-              petalPreview={
-                <PetalShapePreview
-                  shape={petalShape}
-                  palette={PRESETS[selectedPreset].stops}
-                  resetViewKey={petalPreviewResetKey}
-                />
-              }
-              windPreview={<WindPreview wind={designState.wind} />}
+              outlineEditor={outlineEditor}
+              petalPreview={petalPreview}
+              windPreview={windPreview}
               duration={duration}
               previewTime={previewTime}
               playing={playing}
