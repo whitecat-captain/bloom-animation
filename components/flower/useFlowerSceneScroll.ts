@@ -8,25 +8,17 @@ import { createFlowerScene, type FlowerSceneApi } from "./flowerScene";
 type FlowerSceneScrollRefs = {
   rootRef: RefObject<HTMLDivElement | null>;
   canvasRef: RefObject<HTMLDivElement | null>;
-  guiRef: RefObject<HTMLDivElement | null>;
-  tabsRef: RefObject<HTMLDivElement | null>;
   sceneRef: RefObject<FlowerSceneApi | null>;
 };
 
 export function useFlowerSceneScroll({
   rootRef,
   canvasRef,
-  guiRef,
-  tabsRef,
   sceneRef,
 }: FlowerSceneScrollRefs) {
   useEffect(() => {
-    if (!rootRef.current || !canvasRef.current || !guiRef.current) return;
-    const scene = createFlowerScene(
-      canvasRef.current,
-      guiRef.current,
-      tabsRef.current,
-    );
+    if (!rootRef.current || !canvasRef.current) return;
+    const scene = createFlowerScene(canvasRef.current);
     sceneRef.current = scene;
 
     const reduceMotion = window.matchMedia(
@@ -208,7 +200,6 @@ export function useFlowerSceneScroll({
           type: "wheel,touch",
           tolerance: 10,
           preventDefault: true,
-          ignore: ".gui-container",
           onDown: () => stepSection(1),
           onUp: () => stepSection(-1),
           // Fires once wheel/touch events have been quiet for onStopDelay —
@@ -237,5 +228,5 @@ export function useFlowerSceneScroll({
       scene.dispose();
       sceneRef.current = null;
     };
-  }, [canvasRef, guiRef, tabsRef, rootRef, sceneRef]);
+  }, [canvasRef, rootRef, sceneRef]);
 }

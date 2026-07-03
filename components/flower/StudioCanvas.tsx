@@ -549,7 +549,7 @@ export default function StudioCanvas() {
   );
 
   return (
-    <div className="studio">
+    <div className={`studio${showCameraFrame ? " is-framing" : ""}`}>
       <div
         ref={canvasRef}
         className={`studio-stage${bgMode === "transparent" ? " is-transparent" : ""}`}
@@ -563,6 +563,18 @@ export default function StudioCanvas() {
           <span className="studio-export-frame-corner is-bottom-right" />
         </div>
       )}
+
+      <div className="studio-controls-hint" aria-label="Canvas controls">
+        <span className="studio-controls-hint-item">
+          <span className="studio-controls-hint-key">Left drag</span>Orbit
+        </span>
+        <span className="studio-controls-hint-item">
+          <span className="studio-controls-hint-key">Right drag</span>Pan
+        </span>
+        <span className="studio-controls-hint-item">
+          <span className="studio-controls-hint-key">Scroll</span>Zoom
+        </span>
+      </div>
 
       <p className="studio-credit">
         Built by Whitecat Captain -&gt;{" "}

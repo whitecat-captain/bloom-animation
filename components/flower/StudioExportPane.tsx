@@ -33,9 +33,6 @@ type ExportPaneParams = {
   previewTime: number;
   progress: number;
   transparentOutput: string;
-  orbitControl: string;
-  panControl: string;
-  zoomControl: string;
 };
 
 type RefreshableBlade = BladeApi & {
@@ -181,9 +178,6 @@ export default function StudioExportPane({
     previewTime,
     progress,
     transparentOutput: TRANSPARENT_OUTPUT_NOTE,
-    orbitControl: "Left drag",
-    panControl: "Right drag",
-    zoomControl: "Scroll",
   });
 
   useEffect(() => {
@@ -327,27 +321,6 @@ export default function StudioExportPane({
     const cameraFrameSlot = document.createElement("div");
     cameraFrameSlot.className = "studio-sheet-control-slot";
     getFolderContent(view)?.appendChild(cameraFrameSlot);
-
-    const controls = pane.addFolder({
-      title: "Canvas Controls",
-      expanded: false,
-    });
-    createdBlades.push(controls);
-    controls.addBinding(params, "orbitControl", {
-      label: "Orbit",
-      readonly: true,
-      interval: 0,
-    });
-    controls.addBinding(params, "panControl", {
-      label: "Pan",
-      readonly: true,
-      interval: 0,
-    });
-    controls.addBinding(params, "zoomControl", {
-      label: "Zoom",
-      readonly: true,
-      interval: 0,
-    });
 
     paneRef.current = pane;
     rootsRef.current = {
