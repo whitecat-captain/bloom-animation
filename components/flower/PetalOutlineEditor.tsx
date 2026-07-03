@@ -388,6 +388,7 @@ export default function PetalOutlineEditor({
 
   return (
     <div className="studio-outline-editor" aria-label="Interactive petal outline editor">
+      <span className="studio-outline-editor-hint">Drag points to adjust</span>
       <canvas
         ref={canvasRef}
         className="studio-outline-editor-canvas"
