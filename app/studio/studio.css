@@ -279,21 +279,21 @@
 }
 
 .studio-sheet .studio-export-preview-button .tp-btnv_b {
-  background-color: rgba(41, 35, 214, 0.1);
-  box-shadow: inset 0 0 0 1px rgba(41, 35, 214, 0.2);
-  color: rgba(41, 35, 214, 0.85);
+  background-color: var(--tp-button-background-color);
+  box-shadow: inset 0 0 0 1px rgba(255, 251, 245, 0.12);
+  color: var(--tp-button-foreground-color);
 }
 
 .studio-sheet .studio-export-preview-button .tp-btnv_b:hover {
-  background-color: rgba(41, 35, 214, 0.14);
+  background-color: var(--tp-button-background-color-hover);
 }
 
 .studio-sheet .studio-export-preview-button .tp-btnv_b:focus {
-  background-color: rgba(41, 35, 214, 0.16);
+  background-color: var(--tp-button-background-color-focus);
 }
 
 .studio-sheet .studio-export-preview-button .tp-btnv_b:active {
-  background-color: rgba(41, 35, 214, 0.2);
+  background-color: var(--tp-button-background-color-active);
 }
 
 .studio-sheet .studio-export-preview-button.is-preview-exit .tp-btnv_b {

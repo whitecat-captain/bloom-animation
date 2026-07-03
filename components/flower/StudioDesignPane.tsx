@@ -240,7 +240,7 @@ export default function StudioDesignPane({
 
     const renderStyle = pane.addFolder({
       title: "Render Style",
-      expanded: true,
+      expanded: false,
     });
     createdBlades.push(renderStyle);
     const preset = renderStyle.addBinding(params, "preset", {
@@ -540,7 +540,7 @@ export default function StudioDesignPane({
     // minus resolution and the export button.
     const animationPreview = pane.addFolder({
       title: "Animation Preview",
-      expanded: false,
+      expanded: true,
     });
     createdBlades.push(animationPreview);
     const durationBinding = animationPreview.addBinding(params, "duration", {
@@ -561,7 +561,6 @@ export default function StudioDesignPane({
       format: (value) => `${value.toFixed(1)}s`,
     }) as RefreshableBlade;
     const playPreviewButton = animationPreview.addButton({
-      title: "Play Preview",
     });
     playPreviewButton.element.classList.add("studio-export-preview-button");
     playPreviewButton.on("click", () => {
@@ -569,6 +568,7 @@ export default function StudioDesignPane({
     });
 
     const resetAllButton = pane.addButton({ title: "Reset All" });
+    resetAllButton.hidden = true;
     createdBlades.push(resetAllButton);
     resetAllButton.on("click", () => {
       callbacksRef.current.onResetAll();
@@ -688,7 +688,6 @@ export default function StudioDesignPane({
     }
 
     if (!bindings) return;
-    const playTitle = playing ? "Exit Preview" : "Play Preview";
     if (bindings.playPreviewButton.title !== playTitle) {
       bindings.playPreviewButton.title = playTitle;
     }
