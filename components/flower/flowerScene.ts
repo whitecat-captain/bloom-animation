@@ -3,6 +3,20 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import GUI from "lil-gui";
 
 const MAX_LAYOUT_PETALS = 150;
+const DEFAULT_PETAL_GEOMETRY = {
+  petalLen: 0.95,
+  curlClosed: 1.7,
+  curlOpen: -0.35,
+  curlBias: 2.3,
+  w0: 0.16,
+  w1: 0.28,
+  w2: 0.3,
+  w3: 0.2,
+  cup: 0.4,
+  sideCurl: 0.45,
+  waveAmp: 0.035,
+  asym: 0.08,
+};
 
 export type PetalShapeState = {
   petalLen: number;
@@ -21,6 +35,7 @@ export type PetalShapeState = {
 type FlowerSceneOptions = {
   onPetalShapeChange?: (shape: PetalShapeState) => void;
   onActiveDesignTabChange?: (title: string) => void;
+  flowerGroupY?: number;
 };
 
 /**
@@ -403,7 +418,7 @@ void main() {
   // Scroll-driven rotation lives on the group so OrbitControls (camera)
   // and ScrollTrigger (flower) never fight over the same transform.
   const flowerGroup = new THREE.Group();
-  flowerGroup.position.y = 0.45;
+  flowerGroup.position.y = options.flowerGroupY ?? 0.45;
   flowerGroup.scale.setScalar(1.3);
   scene.add(flowerGroup);
 
@@ -562,6 +577,18 @@ void main() {
   // single petal is easy to study.
   const PETAL_MIN = 5;
   const gui = new GUI({ container: guiContainer });
+  const stopNumberWheelAdjust = (event: WheelEvent) => {
+    const target = event.target;
+    if (
+      target instanceof Element &&
+      target.closest(".lil-controller.lil-number")
+    ) {
+      event.stopPropagation();
+    }
+  };
+  guiContainer.addEventListener("wheel", stopNumberWheelAdjust, {
+    capture: true,
+  });
   const U = (name: keyof typeof uniforms) => (v: number) => {
     uniforms[name].value = v;
   };
@@ -589,31 +616,50 @@ void main() {
     return 0.04 + (params.bloomMax - 0.04) * x;
   };
 
+  function setPetalOutlineParams(
+    petalLen: number,
+    [w0, w1, w2, w3]: number[],
+  ) {
+    params.petalLen = THREE.MathUtils.clamp(petalLen, 0.3, 1.5);
+    params.w0 = THREE.MathUtils.clamp(w0, 0, 0.6);
+    params.w1 = THREE.MathUtils.clamp(w1, 0, 0.6);
+    params.w2 = THREE.MathUtils.clamp(w2, 0, 0.6);
+    params.w3 = THREE.MathUtils.clamp(w3, 0, 0.6);
+    uniforms.uLength.value = params.petalLen;
+    bakeRamps();
+    petalGeometryCtrls.forEach((ctrl) => ctrl.updateDisplay());
+    notifyPetalShapeChange();
+  }
+
+  function resetPetalGeometryParams() {
+    Object.assign(params, DEFAULT_PETAL_GEOMETRY);
+    bakeRamps();
+    syncShapeUniforms();
+    petalGeometryCtrls.forEach((ctrl) => ctrl.updateDisplay());
+    notifyPetalShapeChange();
+  }
+
   // Resets every controller (recursively) back to its initial default value;
   // each onChange re-applies uniforms / rebuilds the flower as needed.
   const resetCtrl = gui
-    .add({ reset: () => gui.reset() }, "reset")
+    .add({ reset: () => {
+      gui.reset();
+      resetPetalGeometryParams();
+    } }, "reset")
     .name("↺ Reset All");
 
   const fPetal = gui.addFolder("Petal Geometry");
 
-  // Petal Shape: the flat outline + size of a single petal.
-  const fShape = fPetal.addFolder("Petal Shape");
-  fShape.add(params, "petalLen", 0.3, 1.5).name("Petal Length").onChange(shapeU("uLength"));
-  fShape.add(params, "w0", 0, 0.6).name("Base Width").onChange(shapeBake);
-  fShape.add(params, "w1", 0, 0.6).name("Lower Width").onChange(shapeBake);
-  fShape.add(params, "w2", 0, 0.6).name("Upper Width").onChange(shapeBake);
-  fShape.add(params, "w3", 0, 0.6).name("Tip Width").onChange(shapeBake);
-
-  // Transform: how that flat petal curls and bends in 3D.
-  const fTransform = fPetal.addFolder("Transform");
-  fTransform.add(params, "curlClosed", 0, 4).name("Curl (Closed)").onChange(U("uCurlClosed"));
-  fTransform.add(params, "curlOpen", -1.5, 1).name("Curl (Open)").onChange(shapeU("uCurlOpen"));
-  fTransform.add(params, "curlBias", 0.3, 4).name("Curl Concentration").onChange(shapeBake);
-  fTransform.add(params, "cup", 0, 1.5).name("Cup Arch").onChange(shapeU("uCup"));
-  fTransform.add(params, "sideCurl", -3, 3).name("Transverse Curl").onChange(shapeU("uSideCurl"));
-  fTransform.add(params, "waveAmp", 0, 0.08).name("Edge Wave Amp").onChange(shapeU("uWaveAmp"));
-  fTransform.add(params, "asym", -0.4, 0.4).name("Asymmetry").onChange(shapeU("uAsym"));
+  // 3D Form: how that flat petal curls and bends in space.
+  const fTransform = fPetal.addFolder("3D Form");
+  const petalGeometryCtrls = [
+    fTransform.add(params, "curlOpen", -1.5, 1).name("Lengthwise Curl").onChange(shapeU("uCurlOpen")).decimals(1),
+    fTransform.add(params, "curlBias", 0.3, 4).name("Curl Focus").onChange(shapeBake).decimals(1),
+    fTransform.add(params, "cup", 0, 1.5).name("Cup Depth").onChange(shapeU("uCup")).decimals(1),
+    fTransform.add(params, "sideCurl", -3, 3).name("Edge Roll").onChange(shapeU("uSideCurl")).decimals(1),
+    fTransform.add(params, "waveAmp", 0, 0.08).name("Edge Wave").onChange(shapeU("uWaveAmp")).decimals(1),
+    fTransform.add(params, "asym", -0.4, 0.4).name("Asymmetry").onChange(shapeU("uAsym")).decimals(1),
+  ];
 
   const fPhy = gui.addFolder("Phyllotaxis Layout");
   const numPetalsCtrl = fPhy
@@ -737,7 +783,13 @@ void main() {
       window.removeEventListener("blur", hideTools);
     };
 
-    selectTab(0);
+    const initialTab = Math.max(
+      0,
+      tabFolders.findIndex(
+        (folder) => folder.$title.textContent === "Petal Geometry",
+      ),
+    );
+    selectTab(initialTab);
   }
 
   notifyPetalShapeChange();
@@ -858,6 +910,7 @@ void main() {
     setCurl(v: number) {
       params.curlClosed = v;
       uniforms.uCurlClosed.value = v;
+      notifyPetalShapeChange();
     },
     /** Open-petal curl — what's visible on a bloomed flower (/demo card 01). */
     setCurlOpen(v: number) {
@@ -867,13 +920,12 @@ void main() {
       notifyPetalShapeChange();
     },
     /** Petal width ramp [w0..w3] — driven by the /demo "Folded petal" card. */
-    setPetalWidths([w0, w1, w2, w3]: number[]) {
-      params.w0 = w0;
-      params.w1 = w1;
-      params.w2 = w2;
-      params.w3 = w3;
-      bakeRamps();
-      notifyPetalShapeChange();
+    setPetalWidths(widths: number[]) {
+      setPetalOutlineParams(params.petalLen, widths);
+    },
+    /** Complete flat petal outline — driven by the Studio outline editor. */
+    setPetalOutline(petalLen: number, widths: number[]) {
+      setPetalOutlineParams(petalLen, widths);
     },
     /** Bloom wavefront width — driven by the /demo "Bloom dial" card. */
     setTransition(v: number) {
@@ -899,6 +951,10 @@ void main() {
       params.sideCurl = v;
       uniforms.uSideCurl.value = v;
       notifyPetalShapeChange();
+    },
+    /** Restore the single-petal shape controls without touching layout/export. */
+    resetPetalGeometry() {
+      resetPetalGeometryParams();
     },
     /** Flat tone-shading vs. soft Lambert + subsurface lighting. */
     setFlat(on: boolean) {
@@ -1007,6 +1063,9 @@ void main() {
       renderer.setAnimationLoop(null);
       ro.disconnect();
       window.removeEventListener("resize", onResize);
+      guiContainer.removeEventListener("wheel", stopNumberWheelAdjust, {
+        capture: true,
+      });
       gui.destroy();
       tabsCleanup?.();
       if (tabsContainer) tabsContainer.replaceChildren();

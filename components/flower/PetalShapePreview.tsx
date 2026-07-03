@@ -7,6 +7,7 @@ import type { PetalShapeState } from "./flowerScene";
 
 const STEM_WIDTH = 0.03;
 const STEM_END = 0.04;
+type PaletteStops = [number, number, number][];
 
 function catmullRom(pts: number[], t: number) {
   const n = pts.length - 1;
@@ -32,7 +33,32 @@ function widthAt(shape: PetalShapeState, v: number) {
   return Math.max(catmullRom(widthPts, (v - STEM_END) / (1 - STEM_END)), 0.002);
 }
 
-function petalPoint(shape: PetalShapeState, u01: number, v: number) {
+function mixStop(
+  a: [number, number, number],
+  b: [number, number, number],
+  t: number,
+) {
+  const k = Math.min(Math.max(t, 0), 1);
+  return [
+    a[0] + (b[0] - a[0]) * k,
+    a[1] + (b[1] - a[1]) * k,
+    a[2] + (b[2] - a[2]) * k,
+  ] as [number, number, number];
+}
+
+function previewColorAt(palette: PaletteStops, v: number) {
+  const cold = palette[1] ?? palette[0] ?? [0.2, 0.45, 0.9];
+  const rim = palette[0] ?? cold;
+  const base = palette[2] ?? cold;
+  if (v < 0.22) return mixStop(base, cold, v / 0.22);
+  return mixStop(cold, rim, (v - 0.22) / 0.78);
+}
+
+function petalPoint(
+  shape: PetalShapeState,
+  u01: number,
+  v: number,
+) {
   const u = u01 * 2 - 1;
   const steps = 32;
   const ds = v / steps;
@@ -70,20 +96,31 @@ function petalPoint(shape: PetalShapeState, u01: number, v: number) {
   );
 }
 
-function makePetalGeometry(shape: PetalShapeState) {
+function makePetalPreviewGeometry(shape: PetalShapeState, palette: PaletteStops) {
   const xSegments = 28;
   const ySegments = 72;
   const positions: number[] = [];
   const uvs: number[] = [];
+  const colors: number[] = [];
   const indices: number[] = [];
+  const guidePositions: number[] = [];
+  const addGuide = (points: THREE.Vector3[]) => {
+    for (let i = 1; i < points.length; i++) {
+      const a = points[i - 1];
+      const b = points[i];
+      guidePositions.push(a.x, a.y, a.z, b.x, b.y, b.z);
+    }
+  };
 
   for (let y = 0; y <= ySegments; y++) {
     const v = y / ySegments;
     for (let x = 0; x <= xSegments; x++) {
       const u = x / xSegments;
       const p = petalPoint(shape, u, v);
+      const color = previewColorAt(palette, v);
       positions.push(p.x, p.y, p.z);
       uvs.push(u, v);
+      colors.push(color[0], color[1], color[2]);
     }
   }
 
@@ -97,23 +134,52 @@ function makePetalGeometry(shape: PetalShapeState) {
       indices.push(a, c, b, b, c, d);
     }
   }
+  addGuide(
+    Array.from({ length: 38 }, (_, i) =>
+      petalPoint(shape, 0.5, i / 37),
+    ),
+  );
+  [0.18, 0.36, 0.54, 0.72, 0.9].forEach((v) => {
+    addGuide(
+      Array.from({ length: 25 }, (_, i) =>
+        petalPoint(shape, i / 24, v),
+      ),
+    );
+  });
 
-  const geo = new THREE.BufferGeometry();
-  geo.setIndex(indices);
-  geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-  geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
-  geo.computeVertexNormals();
-  geo.center();
-  return geo;
+  const surface = new THREE.BufferGeometry();
+  surface.setIndex(indices);
+  surface.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  surface.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  surface.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+  surface.computeVertexNormals();
+
+  const guides = new THREE.BufferGeometry();
+  guides.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(guidePositions, 3),
+  );
+
+  surface.computeBoundingBox();
+  const center =
+    surface.boundingBox?.getCenter(new THREE.Vector3()) ?? new THREE.Vector3();
+  surface.translate(-center.x, -center.y, -center.z);
+  guides.translate(-center.x, -center.y, -center.z);
+  return { surface, guides };
 }
 
 export default function PetalShapePreview({
   shape,
+  palette,
+  onReset,
 }: {
   shape: PetalShapeState;
+  palette: PaletteStops;
+  onReset?: () => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const meshRef = useRef<THREE.Mesh | null>(null);
+  const openMeshRef = useRef<THREE.Mesh | null>(null);
+  const openGuideRef = useRef<THREE.LineSegments | null>(null);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -130,7 +196,7 @@ export default function PetalShapePreview({
     host.appendChild(renderer.domElement);
 
     const camera = new THREE.PerspectiveCamera(34, 1, 0.01, 20);
-    camera.position.set(0.7, 0.5, 1.65);
+    camera.position.set(0.76, 0.55, 1.9);
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.enablePan = false;
@@ -138,23 +204,39 @@ export default function PetalShapePreview({
     controls.maxDistance = 3.2;
     controls.target.set(0, 0, 0);
 
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x5c4b8a, 2.1));
-    const key = new THREE.DirectionalLight(0xffffff, 2.8);
-    key.position.set(1.5, 2.2, 1.4);
+    scene.add(new THREE.HemisphereLight(0xffd6a8, 0x1b2554, 0.75));
+    const key = new THREE.DirectionalLight(0xfff0d6, 3.7);
+    key.position.set(-1.8, 2.0, 1.1);
     scene.add(key);
+    const side = new THREE.DirectionalLight(0x6fb7ff, 1.35);
+    side.position.set(1.8, 0.15, 0.9);
+    scene.add(side);
+    const rim = new THREE.DirectionalLight(0xffffff, 2.15);
+    rim.position.set(0.2, 1.0, -2.0);
+    scene.add(rim);
 
     const material = new THREE.MeshStandardMaterial({
-      color: 0xf2a55f,
-      emissive: 0x281006,
-      emissiveIntensity: 0.08,
-      roughness: 0.54,
+      color: 0xffffff,
+      vertexColors: true,
+      emissive: 0x050714,
+      emissiveIntensity: 0.02,
+      roughness: 0.86,
       metalness: 0,
       side: THREE.DoubleSide,
     });
-    const mesh = new THREE.Mesh(new THREE.BufferGeometry(), material);
-    mesh.rotation.x = -0.25;
-    meshRef.current = mesh;
-    scene.add(mesh);
+    const guideMaterial = new THREE.LineBasicMaterial({
+      color: 0x3b1e14,
+      transparent: true,
+      opacity: 0.44,
+    });
+    const openMesh = new THREE.Mesh(new THREE.BufferGeometry(), material);
+    const openGuide = new THREE.LineSegments(new THREE.BufferGeometry(), guideMaterial);
+    [openMesh, openGuide].forEach((object) => {
+      object.rotation.x = -0.25;
+      scene.add(object);
+    });
+    openMeshRef.current = openMesh;
+    openGuideRef.current = openGuide;
 
     const resize = () => {
       const rect = host.getBoundingClientRect();
@@ -180,25 +262,43 @@ export default function PetalShapePreview({
       cancelAnimationFrame(raf);
       ro.disconnect();
       controls.dispose();
-      scene.remove(mesh);
-      mesh.geometry.dispose();
+      scene.remove(openMesh, openGuide);
+      openMesh.geometry.dispose();
+      openGuide.geometry.dispose();
       material.dispose();
+      guideMaterial.dispose();
       renderer.dispose();
       host.removeChild(renderer.domElement);
-      meshRef.current = null;
+      openMeshRef.current = null;
+      openGuideRef.current = null;
     };
   }, []);
 
   useEffect(() => {
-    const mesh = meshRef.current;
-    if (!mesh) return;
-    const previous = mesh.geometry;
-    mesh.geometry = makePetalGeometry(shape);
-    previous.dispose();
-  }, [shape]);
+    const openMesh = openMeshRef.current;
+    const openGuide = openGuideRef.current;
+    if (!openMesh || !openGuide) return;
+
+    const open = makePetalPreviewGeometry(shape, palette);
+    const previous = [
+      openMesh.geometry,
+      openGuide.geometry,
+    ];
+    openMesh.geometry = open.surface;
+    openGuide.geometry = open.guides;
+    previous.forEach((geo) => geo.dispose());
+  }, [shape, palette]);
 
   return (
     <div className="studio-petal-preview" aria-label="3D petal shape preview">
+      <button
+        type="button"
+        className="studio-petal-reset"
+        onClick={onReset}
+        aria-label="Reset petal shape"
+      >
+        ↺
+      </button>
       <div ref={hostRef} className="studio-petal-preview-canvas" />
     </div>
   );
