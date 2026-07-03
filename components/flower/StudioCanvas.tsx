@@ -564,6 +564,18 @@ export default function StudioCanvas() {
         </div>
       )}
 
+      <p className="studio-credit">
+        Built by Whitecat Captain -&gt;{" "}
+        <a
+          className="studio-github-link"
+          href="https://github.com/whitecat-captain/bloom-animation"
+          target="_blank"
+          rel="noreferrer"
+        >
+          GitHub
+        </a>
+      </p>
+
       <div ref={sheetRef} className="studio-sheet">
         {sheetPages && (
           <>

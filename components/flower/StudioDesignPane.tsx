@@ -563,7 +563,10 @@ export default function StudioDesignPane({
     const playPreviewButton = animationPreview.addButton({
       title: "Play",
     });
-    playPreviewButton.element.classList.add("studio-export-preview-button");
+    playPreviewButton.element.classList.add(
+      "studio-export-preview-button",
+      "studio-design-preview-button",
+    );
     playPreviewButton.on("click", () => {
       callbacksRef.current.onTogglePlay();
     });
