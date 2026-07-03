@@ -1,11 +1,17 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { createRoot, type Root } from "react-dom/client";
 import {
   Pane,
   type BladeApi,
   type ButtonApi,
+  type FolderApi,
 } from "tweakpane";
+import {
+  StudioSwitchButton,
+  StudioTwoButtonSelect,
+} from "./StudioSheetControls";
 
 type BgMode = "transparent" | "solid";
 
@@ -20,14 +26,11 @@ export type StudioExportResolution = {
 };
 
 type ExportPaneParams = {
-  preset: number;
-  bgMode: BgMode;
   color: string;
   imageRes: number;
   videoRes: number;
   duration: number;
   previewTime: number;
-  showCameraFrame: boolean;
   progress: number;
   transparentOutput: string;
   orbitControl: string;
@@ -47,14 +50,11 @@ type ChangeableBlade<T> = RefreshableBlade & {
 };
 
 type ExportPaneBindings = {
-  preset: RefreshableBlade;
-  bgMode: RefreshableBlade;
   color: RefreshableBlade;
   imageRes: RefreshableBlade;
   videoRes: RefreshableBlade;
   duration: RefreshableBlade;
   previewTime: RefreshableBlade;
-  showCameraFrame: RefreshableBlade;
   progress: RefreshableBlade;
   transparentOutput: RefreshableBlade;
   imageButton: ButtonApi;
@@ -62,10 +62,13 @@ type ExportPaneBindings = {
   videoButton: ButtonApi;
 };
 
+type ExportPaneRoots = {
+  bgMode: Root;
+  cameraFrame: Root;
+};
+
 type StudioExportPaneProps = {
-  presets: StudioExportPreset[];
   resolutions: StudioExportResolution[];
-  selectedPreset: number;
   bgMode: BgMode;
   color: string;
   imageRes: number;
@@ -77,7 +80,6 @@ type StudioExportPaneProps = {
   exportKind: "image" | "video" | null;
   progress: number;
   playing: boolean;
-  onPresetChange: (index: number) => void;
   onBgModeChange: (mode: BgMode) => void;
   onColorChange: (color: string) => void;
   onImageResChange: (index: number) => void;
@@ -92,6 +94,14 @@ type StudioExportPaneProps = {
 const TRANSPARENT_OUTPUT_NOTE =
   "PNG sequence (.zip) with alpha. ffmpeg: -framerate 30 -i flower_%04d.png -c:v prores_ks -profile:v 4444 -pix_fmt yuva444p10le flower.mov";
 
+const BG_MODE_OPTIONS: [
+  { label: string; value: BgMode },
+  { label: string; value: BgMode },
+] = [
+  { label: "Solid", value: "solid" },
+  { label: "Transparent", value: "transparent" },
+];
+
 function optionMap<T extends string | number>(
   entries: Array<{ label: string; value: T }>,
 ) {
@@ -102,9 +112,7 @@ function optionMap<T extends string | number>(
 }
 
 export default function StudioExportPane({
-  presets,
   resolutions,
-  selectedPreset,
   bgMode,
   color,
   imageRes,
@@ -116,7 +124,6 @@ export default function StudioExportPane({
   exportKind,
   progress,
   playing,
-  onPresetChange,
   onBgModeChange,
   onColorChange,
   onImageResChange,
@@ -130,8 +137,8 @@ export default function StudioExportPane({
   const containerRef = useRef<HTMLDivElement>(null);
   const paneRef = useRef<Pane | null>(null);
   const bindingsRef = useRef<ExportPaneBindings | null>(null);
+  const rootsRef = useRef<ExportPaneRoots | null>(null);
   const callbacksRef = useRef({
-    onPresetChange,
     onBgModeChange,
     onColorChange,
     onImageResChange,
@@ -143,14 +150,11 @@ export default function StudioExportPane({
     onExportVideo,
   });
   const paramsRef = useRef<ExportPaneParams>({
-    preset: selectedPreset,
-    bgMode,
     color,
     imageRes,
     videoRes,
     duration,
     previewTime,
-    showCameraFrame,
     progress,
     transparentOutput: TRANSPARENT_OUTPUT_NOTE,
     orbitControl: "Left drag",
@@ -160,7 +164,6 @@ export default function StudioExportPane({
 
   useEffect(() => {
     callbacksRef.current = {
-      onPresetChange,
       onBgModeChange,
       onColorChange,
       onImageResChange,
@@ -178,7 +181,6 @@ export default function StudioExportPane({
     onExportImage,
     onExportVideo,
     onImageResChange,
-    onPresetChange,
     onShowCameraFrameChange,
     onTogglePlay,
     onVideoResChange,
@@ -195,37 +197,24 @@ export default function StudioExportPane({
       expanded: true,
     });
 
-    const preset = pane.addBinding(params, "preset", {
-      label: "Preset",
-      options: optionMap(presets.map((presetItem, index) => ({
-        label: presetItem.name,
-        value: index,
-      }))),
-    }) as ChangeableBlade<number>;
-    preset.on("change", (event) => {
-      callbacksRef.current.onPresetChange(event.value);
-    });
-
     const background = pane.addFolder({
       title: "Background",
       expanded: true,
     });
-    const bgModeBinding = background.addBinding(params, "bgMode", {
-      label: "Mode",
-      options: {
-        Solid: "solid",
-        Transparent: "transparent",
-      },
-    }) as ChangeableBlade<BgMode>;
-    bgModeBinding.on("change", (event) => {
-      callbacksRef.current.onBgModeChange(event.value);
-    });
+    const getFolderContent = (folder: FolderApi) =>
+      folder.element.querySelector(":scope > .tp-fldv_c");
+    const bgModeSlot = document.createElement("div");
+    bgModeSlot.className = "studio-sheet-control-slot";
 
     const colorBinding = background.addBinding(params, "color", {
       label: "Color",
       picker: "inline",
       expanded: true,
     }) as ChangeableBlade<string>;
+    getFolderContent(background)?.insertBefore(
+      bgModeSlot,
+      colorBinding.element,
+    );
     colorBinding.on("change", (event) => {
       callbacksRef.current.onColorChange(event.value);
     });
@@ -310,12 +299,9 @@ export default function StudioExportPane({
       title: "View",
       expanded: true,
     });
-    const showCameraFrameBinding = view.addBinding(params, "showCameraFrame", {
-      label: "Camera Frame",
-    }) as ChangeableBlade<boolean>;
-    showCameraFrameBinding.on("change", (event) => {
-      callbacksRef.current.onShowCameraFrameChange(event.value);
-    });
+    const cameraFrameSlot = document.createElement("div");
+    cameraFrameSlot.className = "studio-sheet-control-slot";
+    getFolderContent(view)?.appendChild(cameraFrameSlot);
 
     const controls = pane.addFolder({
       title: "Canvas Controls",
@@ -335,15 +321,16 @@ export default function StudioExportPane({
     });
 
     paneRef.current = pane;
+    rootsRef.current = {
+      bgMode: createRoot(bgModeSlot),
+      cameraFrame: createRoot(cameraFrameSlot),
+    };
     bindingsRef.current = {
-      preset,
-      bgMode: bgModeBinding,
       color: colorBinding,
       imageRes: imageResBinding,
       videoRes: videoResBinding,
       duration: durationBinding,
       previewTime: previewTimeBinding,
-      showCameraFrame: showCameraFrameBinding,
       progress: progressBinding,
       transparentOutput,
       imageButton,
@@ -352,35 +339,37 @@ export default function StudioExportPane({
     };
 
     return () => {
+      const roots = rootsRef.current;
+      if (roots) {
+        window.setTimeout(() => {
+          roots.bgMode.unmount();
+          roots.cameraFrame.unmount();
+        }, 0);
+      }
+      rootsRef.current = null;
       bindingsRef.current = null;
       paneRef.current = null;
       pane.dispose();
     };
-  }, [presets, resolutions]);
+  }, [resolutions]);
 
   useEffect(() => {
     const params = paramsRef.current;
-    params.preset = selectedPreset;
-    params.bgMode = bgMode;
     params.color = color;
     params.imageRes = imageRes;
     params.videoRes = videoRes;
     params.duration = duration;
     params.previewTime = previewTime;
-    params.showCameraFrame = showCameraFrame;
     params.progress = Math.round(progress * 100);
 
     const bindings = bindingsRef.current;
     if (!bindings) return;
 
-    bindings.preset.refresh();
-    bindings.bgMode.refresh();
     bindings.color.refresh();
     bindings.imageRes.refresh();
     bindings.videoRes.refresh();
     bindings.duration.refresh();
     bindings.previewTime.refresh();
-    bindings.showCameraFrame.refresh();
     bindings.progress.refresh();
 
     bindings.color.hidden = bgMode !== "solid";
@@ -391,7 +380,6 @@ export default function StudioExportPane({
     bindings.videoRes.disabled = exporting;
     bindings.duration.disabled = exporting;
     bindings.previewTime.disabled = exporting;
-    bindings.showCameraFrame.disabled = exporting;
     bindings.imageButton.disabled = exporting;
     bindings.playButton.disabled = exporting;
     bindings.videoButton.disabled = exporting;
@@ -415,10 +403,33 @@ export default function StudioExportPane({
     playing,
     progress,
     previewTime,
-    selectedPreset,
     showCameraFrame,
     videoRes,
   ]);
+
+  useEffect(() => {
+    const roots = rootsRef.current;
+    if (!roots) return;
+
+    roots.bgMode.render(
+      <StudioTwoButtonSelect
+        label="Mode"
+        value={bgMode}
+        options={BG_MODE_OPTIONS}
+        onChange={(value) => callbacksRef.current.onBgModeChange(value)}
+      />,
+    );
+    roots.cameraFrame.render(
+      <StudioSwitchButton
+        label="Camera Frame"
+        checked={showCameraFrame}
+        disabled={exporting}
+        onChange={(checked) =>
+          callbacksRef.current.onShowCameraFrameChange(checked)
+        }
+      />,
+    );
+  }, [bgMode, exporting, showCameraFrame]);
 
   return <aside ref={containerRef} className="studio-export" />;
 }

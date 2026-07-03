@@ -32,8 +32,36 @@ export type PetalShapeState = {
   asym: number;
 };
 
+export type FlowerDesignState = {
+  phyllotaxis: {
+    numPetals: number;
+    goldenAngle: number;
+    radius: number;
+    radiusBias: number;
+    height: number;
+    heightBias: number;
+    scaleInner: number;
+    tiltInner: number;
+    outAngle: number;
+    tiltBias: number;
+  };
+  wind: {
+    jitter: number;
+    shellGap: number;
+    noiseAmp: number;
+    noiseFreq: number;
+    windAmp: number;
+    windSpeed: number;
+    windHeading: number;
+  };
+  renderStyle: {
+    flat: boolean;
+  };
+};
+
 type FlowerSceneOptions = {
   onPetalShapeChange?: (shape: PetalShapeState) => void;
+  onDesignStateChange?: (state: FlowerDesignState) => void;
   onActiveDesignTabChange?: (title: string) => void;
   flowerGroupY?: number;
 };
@@ -164,6 +192,35 @@ export function createFlowerScene(
   });
   const notifyPetalShapeChange = () => {
     options.onPetalShapeChange?.(petalShapeState());
+  };
+  const designState = (): FlowerDesignState => ({
+    phyllotaxis: {
+      numPetals: params.numPetals,
+      goldenAngle: params.goldenAngle,
+      radius: params.radius,
+      radiusBias: params.radiusBias,
+      height: params.height,
+      heightBias: params.heightBias,
+      scaleInner: params.scaleInner,
+      tiltInner: params.tiltInner,
+      outAngle: params.outAngle,
+      tiltBias: params.tiltBias,
+    },
+    wind: {
+      jitter: params.jitter,
+      shellGap: params.shellGap,
+      noiseAmp: params.noiseAmp,
+      noiseFreq: params.noiseFreq,
+      windAmp: params.windAmp,
+      windSpeed: params.windSpeed,
+      windHeading: params.windHeading,
+    },
+    renderStyle: {
+      flat: params.flat,
+    },
+  });
+  const notifyDesignStateChange = () => {
+    options.onDesignStateChange?.(designState());
   };
 
   const uniforms = {
@@ -498,6 +555,7 @@ void main() {
     geo.setAttribute("aTilt", new THREE.InstancedBufferAttribute(aTilt, 1));
     flower.instanceMatrix.needsUpdate = true;
     flowerGroup.add(flower);
+    notifyDesignStateChange();
   }
   buildFlower();
 
@@ -581,7 +639,8 @@ void main() {
     const target = event.target;
     if (
       target instanceof Element &&
-      target.closest(".lil-controller.lil-number")
+      (target.closest(".lil-controller.lil-number") ||
+        target.closest(".studio-design-pane .tp-txtv_i"))
     ) {
       event.stopPropagation();
     }
@@ -591,6 +650,7 @@ void main() {
   });
   const U = (name: keyof typeof uniforms) => (v: number) => {
     uniforms[name].value = v;
+    notifyDesignStateChange();
   };
   const shapeU = (name: keyof typeof uniforms) => (v: number) => {
     uniforms[name].value = v;
@@ -666,28 +726,36 @@ void main() {
     .add(params, "numPetals", PETAL_MIN, 150, 1)
     .name("Petals Count")
     .onChange(buildFlower);
-  fPhy.add(params, "goldenAngle", 90, 180, 0.1).name("Golden Angle").onChange(buildFlower);
-  fPhy.add(params, "radius", 0.1, 1.5).name("Base Radius").onChange(buildFlower);
-  fPhy.add(params, "radiusBias", 0.3, 3).name("Radius Distribution").onChange(buildFlower);
-  fPhy.add(params, "height", 0, 1).name("Receptacle Height").onChange(buildFlower);
-  fPhy.add(params, "heightBias", 0.3, 3).name("Height Distribution").onChange(buildFlower);
-  fPhy.add(params, "scaleInner", 0.1, 1).name("Inner Scale").onChange(buildFlower);
-  fPhy.add(params, "tiltInner", -0.5, 1.5).name("Inner Tilt").onChange(buildFlower);
-  fPhy.add(params, "outAngle", 0, 120).name("Outer Angle (Max)").onChange(buildFlower);
-  fPhy.add(params, "tiltBias", 0.5, 6).name("Tilt Distribution").onChange(buildFlower);
+  const phyllotaxisCtrls = [
+    numPetalsCtrl,
+    fPhy.add(params, "goldenAngle", 90, 180, 0.1).name("Golden Angle").onChange(buildFlower),
+    fPhy.add(params, "radius", 0.1, 1.5).name("Base Radius").onChange(buildFlower),
+    fPhy.add(params, "radiusBias", 0.3, 3).name("Radius Distribution").onChange(buildFlower),
+    fPhy.add(params, "height", 0, 1).name("Receptacle Height").onChange(buildFlower),
+    fPhy.add(params, "heightBias", 0.3, 3).name("Height Distribution").onChange(buildFlower),
+    fPhy.add(params, "scaleInner", 0.1, 1).name("Inner Scale").onChange(buildFlower),
+    fPhy.add(params, "tiltInner", -0.5, 1.5).name("Inner Tilt").onChange(buildFlower),
+    fPhy.add(params, "outAngle", 0, 120).name("Outer Angle (Max)").onChange(buildFlower),
+    fPhy.add(params, "tiltBias", 0.5, 6).name("Tilt Distribution").onChange(buildFlower),
+  ];
   fPhy.close();
 
   const fDetail = gui.addFolder("Wind & Jitter");
-  fDetail.add(params, "jitter", 0, 0.4).name("Petal Jitter").onChange(buildFlower);
-  fDetail.add(params, "shellGap", 0, 0.5).name("Shell Gap (Closed)").onChange(U("uShellGap"));
-  fDetail.add(params, "noiseAmp", 0, 0.12).name("Surface Noise Amp").onChange(U("uNoiseAmp"));
-  fDetail.add(params, "noiseFreq", 1, 15).name("Surface Noise Freq").onChange(U("uNoiseFreq"));
-  fDetail.add(params, "windAmp", 0, 0.5).name("Wind Amplitude").onChange(U("uWindAmp"));
-  fDetail.add(params, "windSpeed", 0, 4).name("Wind Speed").onChange(U("uWindSpeed"));
-  fDetail
-    .add(params, "windHeading", 0, 360)
-    .name("Wind Direction")
-    .onChange((v: number) => (uniforms.uWindHeading.value = (v * Math.PI) / 180));
+  const windCtrls = [
+    fDetail.add(params, "jitter", 0, 0.4).name("Petal Jitter").onChange(buildFlower),
+    fDetail.add(params, "shellGap", 0, 0.5).name("Shell Gap (Closed)").onChange(U("uShellGap")),
+    fDetail.add(params, "noiseAmp", 0, 0.12).name("Surface Noise Amp").onChange(U("uNoiseAmp")),
+    fDetail.add(params, "noiseFreq", 1, 15).name("Surface Noise Freq").onChange(U("uNoiseFreq")),
+    fDetail.add(params, "windAmp", 0, 0.5).name("Wind Amplitude").onChange(U("uWindAmp")),
+    fDetail.add(params, "windSpeed", 0, 4).name("Wind Speed").onChange(U("uWindSpeed")),
+    fDetail
+      .add(params, "windHeading", 0, 360)
+      .name("Wind Direction")
+      .onChange((v: number) => {
+        uniforms.uWindHeading.value = (v * Math.PI) / 180;
+        notifyDesignStateChange();
+      }),
+  ];
   fDetail.close();
 
   const fAnim = gui.addFolder("Animation");
@@ -702,11 +770,22 @@ void main() {
     .name("▶ Play");
 
   const fStyle = gui.addFolder("Render Style");
-  fStyle
+  const renderStyleCtrls = [
+    fStyle
     .add(params, "flat")
     .name("Flat / Tone Shading")
-    .onChange((v: boolean) => (uniforms.uFlat.value = v ? 1 : 0));
+      .onChange((v: boolean) => {
+        uniforms.uFlat.value = v ? 1 : 0;
+        notifyDesignStateChange();
+      }),
+  ];
   fStyle.close();
+
+  const refreshDesignControllers = () => {
+    phyllotaxisCtrls.forEach((ctrl) => ctrl.updateDisplay());
+    windCtrls.forEach((ctrl) => ctrl.updateDisplay());
+    renderStyleCtrls.forEach((ctrl) => ctrl.updateDisplay());
+  };
 
   const fStem = gui.addFolder("Stem & Leaves");
   fStem.add(stemParams, "show").name("Show Stem").onChange(buildStem);
@@ -886,6 +965,7 @@ void main() {
     /** Rebuilds the layout — used by the /mockup showcase sliders. */
     setGoldenAngle(deg: number) {
       params.goldenAngle = deg;
+      refreshDesignControllers();
       buildFlower();
     },
     setStableLayout(on: boolean) {
@@ -904,6 +984,40 @@ void main() {
         1,
         MAX_LAYOUT_PETALS,
       );
+      refreshDesignControllers();
+      buildFlower();
+    },
+    setPhyllotaxis<K extends keyof FlowerDesignState["phyllotaxis"]>(
+      key: K,
+      value: FlowerDesignState["phyllotaxis"][K],
+    ) {
+      const v = Number(value);
+      if (key === "numPetals") {
+        params.numPetals = THREE.MathUtils.clamp(
+          Math.round(v),
+          PETAL_MIN,
+          MAX_LAYOUT_PETALS,
+        );
+      } else if (key === "goldenAngle") {
+        params.goldenAngle = THREE.MathUtils.clamp(v, 90, 180);
+      } else if (key === "radius") {
+        params.radius = THREE.MathUtils.clamp(v, 0.1, 1.5);
+      } else if (key === "radiusBias") {
+        params.radiusBias = THREE.MathUtils.clamp(v, 0.3, 3);
+      } else if (key === "height") {
+        params.height = THREE.MathUtils.clamp(v, 0, 1);
+      } else if (key === "heightBias") {
+        params.heightBias = THREE.MathUtils.clamp(v, 0.3, 3);
+      } else if (key === "scaleInner") {
+        params.scaleInner = THREE.MathUtils.clamp(v, 0.1, 1);
+      } else if (key === "tiltInner") {
+        params.tiltInner = THREE.MathUtils.clamp(v, -0.5, 1.5);
+      } else if (key === "outAngle") {
+        params.outAngle = THREE.MathUtils.clamp(v, 0, 120);
+      } else if (key === "tiltBias") {
+        params.tiltBias = THREE.MathUtils.clamp(v, 0.5, 6);
+      }
+      refreshDesignControllers();
       buildFlower();
     },
     /** Petal curl-when-closed. */
@@ -917,6 +1031,14 @@ void main() {
       const c = THREE.MathUtils.clamp(v, -1.5, 1.2);
       params.curlOpen = c;
       uniforms.uCurlOpen.value = c;
+      petalGeometryCtrls.forEach((ctrl) => ctrl.updateDisplay());
+      notifyPetalShapeChange();
+    },
+    /** Curl bias remaps where the bend concentrates along the petal. */
+    setCurlBias(v: number) {
+      params.curlBias = THREE.MathUtils.clamp(v, 0.3, 4);
+      bakeRamps();
+      petalGeometryCtrls.forEach((ctrl) => ctrl.updateDisplay());
       notifyPetalShapeChange();
     },
     /** Petal width ramp [w0..w3] — driven by the /demo "Folded petal" card. */
@@ -935,21 +1057,74 @@ void main() {
     setWindAmp(v: number) {
       params.windAmp = v;
       uniforms.uWindAmp.value = v;
+      refreshDesignControllers();
+      notifyDesignStateChange();
     },
     setWindSpeed(v: number) {
       params.windSpeed = v;
       uniforms.uWindSpeed.value = v;
+      refreshDesignControllers();
+      notifyDesignStateChange();
+    },
+    setWind<K extends keyof FlowerDesignState["wind"]>(
+      key: K,
+      value: FlowerDesignState["wind"][K],
+    ) {
+      const v = Number(value);
+      if (key === "jitter") {
+        params.jitter = THREE.MathUtils.clamp(v, 0, 0.4);
+        refreshDesignControllers();
+        buildFlower();
+        return;
+      }
+      if (key === "shellGap") {
+        params.shellGap = THREE.MathUtils.clamp(v, 0, 0.5);
+        uniforms.uShellGap.value = params.shellGap;
+      } else if (key === "noiseAmp") {
+        params.noiseAmp = THREE.MathUtils.clamp(v, 0, 0.12);
+        uniforms.uNoiseAmp.value = params.noiseAmp;
+      } else if (key === "noiseFreq") {
+        params.noiseFreq = THREE.MathUtils.clamp(v, 1, 15);
+        uniforms.uNoiseFreq.value = params.noiseFreq;
+      } else if (key === "windAmp") {
+        params.windAmp = THREE.MathUtils.clamp(v, 0, 0.5);
+        uniforms.uWindAmp.value = params.windAmp;
+      } else if (key === "windSpeed") {
+        params.windSpeed = THREE.MathUtils.clamp(v, 0, 4);
+        uniforms.uWindSpeed.value = params.windSpeed;
+      } else if (key === "windHeading") {
+        params.windHeading = THREE.MathUtils.clamp(v, 0, 360);
+        uniforms.uWindHeading.value = (params.windHeading * Math.PI) / 180;
+      }
+      refreshDesignControllers();
+      notifyDesignStateChange();
     },
     /** Petal cup arch (transverse spoon). Uniform-only — safe to drag live. */
     setCup(v: number) {
-      params.cup = v;
-      uniforms.uCup.value = v;
+      params.cup = THREE.MathUtils.clamp(v, 0, 1.5);
+      uniforms.uCup.value = params.cup;
+      petalGeometryCtrls.forEach((ctrl) => ctrl.updateDisplay());
       notifyPetalShapeChange();
     },
     /** Edge roll (involute "quilled" look of a ball dahlia). Uniform-only. */
     setSideCurl(v: number) {
-      params.sideCurl = v;
-      uniforms.uSideCurl.value = v;
+      params.sideCurl = THREE.MathUtils.clamp(v, -3, 3);
+      uniforms.uSideCurl.value = params.sideCurl;
+      petalGeometryCtrls.forEach((ctrl) => ctrl.updateDisplay());
+      notifyPetalShapeChange();
+    },
+    /** Subtle edge undulation on the petal silhouette. */
+    setWaveAmp(v: number) {
+      params.waveAmp = THREE.MathUtils.clamp(v, 0, 0.08);
+      uniforms.uWaveAmp.value = params.waveAmp;
+      petalGeometryCtrls.forEach((ctrl) => ctrl.updateDisplay());
+      notifyPetalShapeChange();
+    },
+    /** Left/right petal imbalance. */
+    setAsym(v: number) {
+      params.asym = THREE.MathUtils.clamp(v, -0.4, 0.4);
+      uniforms.uAsym.value = params.asym;
+      petalGeometryCtrls.forEach((ctrl) => ctrl.updateDisplay());
       notifyPetalShapeChange();
     },
     /** Restore the single-petal shape controls without touching layout/export. */
@@ -960,6 +1135,19 @@ void main() {
     setFlat(on: boolean) {
       params.flat = on;
       uniforms.uFlat.value = on ? 1 : 0;
+      refreshDesignControllers();
+      notifyDesignStateChange();
+    },
+    setRenderStyle<K extends keyof FlowerDesignState["renderStyle"]>(
+      key: K,
+      value: FlowerDesignState["renderStyle"][K],
+    ) {
+      if (key === "flat") {
+        params.flat = Boolean(value);
+        uniforms.uFlat.value = params.flat ? 1 : 0;
+      }
+      refreshDesignControllers();
+      notifyDesignStateChange();
     },
     /** Recolour the five-stop petal ramp (cold rim -> hot core), each [r,g,b]. */
     setPalette(stops: [number, number, number][]) {
