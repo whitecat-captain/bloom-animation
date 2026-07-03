@@ -1,8 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap");
 
 /* Flower Studio — focused full-screen customizer + export tool.
-   Reuses the liquid-glass utilities, lil-gui theme and bottom .gui-container
-   panel from flower.css; this file adds the stage + export panel chrome. */
+   Full-viewport WebGL stage plus a Tweakpane design/export sheet. */
 
 .studio {
   position: relative;
@@ -11,9 +10,6 @@
   overflow: hidden;
   background: #05070f;
   font-family: "Inter", system-ui, -apple-system, sans-serif;
-  /* Bottom designer panel geometry — flower.css's .gui-container reads these. */
-  --panel-h: 272px;
-  --panel-gap: 28px;
 }
 
 /* Fixed full-viewport WebGL stage. The engine appends its canvas here. */
@@ -30,32 +26,6 @@
   outline: none;
 }
 
-.studio .gui-container {
-  display: none;
-  background: #111827;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.34);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-.studio .gui-container::before {
-  display: none;
-}
-.studio-design-panel-main {
-  flex: 1 1 auto;
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.studio-petal-workbench {
-  flex: 0 0 108px;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(128px, 0.38fr) minmax(0, 1fr);
-  gap: 10px;
-}
 .studio-outline-editor {
   position: relative;
   min-width: 0;
@@ -91,10 +61,6 @@
   overflow: hidden;
   border-radius: 10px;
   background: #0b1020;
-}
-.studio-petal-workbench .studio-petal-preview {
-  flex: initial;
-  height: 100%;
 }
 .studio-design-preview-slot,
 .studio-design-outline-slot {
@@ -516,22 +482,15 @@
 }
 
 @media (max-width: 760px) {
-  .studio {
-    --panel-h: 42vh;
-    --panel-gap: 12px;
-  }
-  .studio-design-panel-main {
-    gap: 8px;
-  }
   .studio-petal-preview {
     flex-basis: 96px;
   }
   .studio-sheet {
     top: auto;
-    bottom: calc(var(--panel-h) + var(--panel-gap) + 14px);
+    bottom: 12px;
     right: 12px;
     left: 12px;
     width: auto;
-    max-height: 44vh;
+    max-height: calc(100vh - 24px);
   }
 }

@@ -77,13 +77,17 @@ type FlowerSceneOptions = {
   flowerGroupY?: number;
 };
 
+type DisplayController = {
+  updateDisplay: () => void;
+};
+
 /**
- * Boots the phyllotaxis flower scene + lil-gui into the given containers.
- * Returns a cleanup function that tears down Three.js, the GUI and listeners.
+ * Boots the phyllotaxis flower scene into the given canvas container.
+ * When a GUI container is provided, lil-gui controls are mounted as well.
  */
 export function createFlowerScene(
   canvasContainer: HTMLElement,
-  guiContainer: HTMLElement,
+  guiContainer?: HTMLElement | null,
   tabsContainer?: HTMLElement | null,
   options: FlowerSceneOptions = {},
 ) {
@@ -143,6 +147,7 @@ export function createFlowerScene(
     // ===== Render style: flat per-petal gradient (no lighting) =====
     flat: true,
   };
+  const initialParams = { ...params };
 
   // ===== ramp texture (R=width, G=curlDensity) =====
   const RAMP_RES = 256;
@@ -205,6 +210,7 @@ export function createFlowerScene(
     options.onPetalShapeChange?.(petalShapeState());
   };
   const stemParams = { show: true, length: 1.8, leaves: true };
+  const initialStemParams = { ...stemParams };
   const designState = (): FlowerDesignState => ({
     phyllotaxis: {
       numPetals: params.numPetals,
@@ -665,24 +671,18 @@ void main() {
   }
   buildStem();
 
-  // ===== GUI =====
-  // Fewest petals the layout allows — the Petal tab's reset drops to this so a
-  // single petal is easy to study.
+  // ===== GUI bridge =====
+  // Fewest petals the layout allows — the legacy Petal tab's reset drops to
+  // this so a single petal is easy to study.
   const PETAL_MIN = 5;
-  const gui = new GUI({ container: guiContainer });
-  const stopNumberWheelAdjust = (event: WheelEvent) => {
-    const target = event.target;
-    if (
-      target instanceof Element &&
-      (target.closest(".lil-controller.lil-number") ||
-        target.closest(".studio-design-pane .tp-txtv_i"))
-    ) {
-      event.stopPropagation();
-    }
-  };
-  guiContainer.addEventListener("wheel", stopNumberWheelAdjust, {
-    capture: true,
-  });
+  let petalGeometryCtrls: DisplayController[] = [];
+  let phyllotaxisCtrls: DisplayController[] = [];
+  let windCtrls: DisplayController[] = [];
+  let renderStyleCtrls: DisplayController[] = [];
+  let tabsCleanup: (() => void) | null = null;
+  let guiCleanup: (() => void) | null = null;
+  let playStart: number | null = null;
+
   const U = (name: keyof typeof uniforms) => (v: number) => {
     uniforms[name].value = v;
     notifyDesignStateChange();
@@ -734,106 +734,6 @@ void main() {
     notifyPetalShapeChange();
   }
 
-  // Resets every controller (recursively) back to its initial default value;
-  // each onChange re-applies uniforms / rebuilds the flower as needed.
-  const resetCtrl = gui
-    .add({ reset: () => {
-      gui.reset();
-      resetPetalGeometryParams();
-    } }, "reset")
-    .name("↺ Reset All");
-
-  const fPetal = gui.addFolder("Petal Geometry");
-
-  // 3D Form: how that flat petal curls and bends in space.
-  const fTransform = fPetal.addFolder("3D Form");
-  const petalGeometryCtrls = [
-    fTransform.add(params, "curlOpen", -1.5, 1).name("Lengthwise Curl").onChange(shapeU("uCurlOpen")).decimals(1),
-    fTransform.add(params, "curlBias", 0.3, 4).name("Curl Focus").onChange(shapeBake).decimals(1),
-    fTransform.add(params, "cup", 0, 1.5).name("Cup Depth").onChange(shapeU("uCup")).decimals(1),
-    fTransform.add(params, "sideCurl", -3, 3).name("Edge Roll").onChange(shapeU("uSideCurl")).decimals(1),
-    fTransform.add(params, "waveAmp", 0, 0.08).name("Edge Wave").onChange(shapeU("uWaveAmp")).decimals(1),
-    fTransform.add(params, "asym", -0.4, 0.4).name("Asymmetry").onChange(shapeU("uAsym")).decimals(1),
-  ];
-
-  const fPhy = gui.addFolder("Phyllotaxis Layout");
-  const numPetalsCtrl = fPhy
-    .add(params, "numPetals", PETAL_MIN, 150, 1)
-    .name("Petals Count")
-    .onChange(buildFlower);
-  const phyllotaxisCtrls = [
-    numPetalsCtrl,
-    fPhy.add(params, "goldenAngle", 90, 180, 0.1).name("Golden Angle").onChange(buildFlower),
-    fPhy.add(params, "radius", 0.1, 1.5).name("Base Radius").onChange(buildFlower),
-    fPhy.add(params, "radiusBias", 0.3, 3).name("Radius Distribution").onChange(buildFlower),
-    fPhy.add(params, "height", 0, 1).name("Receptacle Height").onChange(buildFlower),
-    fPhy.add(params, "heightBias", 0.3, 3).name("Height Distribution").onChange(buildFlower),
-    fPhy.add(params, "scaleInner", 0.1, 1).name("Inner Scale").onChange(buildFlower),
-    fPhy.add(params, "tiltInner", -0.5, 1.5).name("Inner Tilt").onChange(buildFlower),
-    fPhy.add(params, "outAngle", 0, 120).name("Outer Angle (Max)").onChange(buildFlower),
-    fPhy.add(params, "tiltBias", 0.5, 6).name("Tilt Distribution").onChange(buildFlower),
-  ];
-  fPhy.close();
-
-  const fDetail = gui.addFolder("Wind & Jitter");
-  const windCtrls = [
-    fDetail.add(params, "jitter", 0, 0.4).name("Petal Jitter").onChange(buildFlower),
-    fDetail.add(params, "shellGap", 0, 0.5).name("Shell Gap (Closed)").onChange(U("uShellGap")),
-    fDetail.add(params, "noiseAmp", 0, 0.12).name("Surface Noise Amp").onChange(U("uNoiseAmp")),
-    fDetail.add(params, "noiseFreq", 1, 15).name("Surface Noise Freq").onChange(U("uNoiseFreq")),
-    fDetail.add(params, "windAmp", 0, 0.5).name("Wind Amplitude").onChange(U("uWindAmp")),
-    fDetail.add(params, "windSpeed", 0, 4).name("Wind Speed").onChange(U("uWindSpeed")),
-    fDetail
-      .add(params, "windHeading", 0, 360)
-      .name("Wind Direction")
-      .onChange((v: number) => {
-        uniforms.uWindHeading.value = (v * Math.PI) / 180;
-        notifyDesignStateChange();
-      }),
-  ];
-  fDetail.close();
-
-  const fAnim = gui.addFolder("Animation");
-  animationCtrls = [
-    fAnim
-      .add(params, "bloom", 0, 1)
-      .name("Bloom Progress")
-      .onChange((v: number) => {
-        applyBloom(v);
-        notifyDesignStateChange();
-      })
-      .listen(),
-    fAnim
-      .add(params, "bloomMax", 0.5, 1)
-      .name("Bloom Limit")
-      .onChange(() => notifyDesignStateChange()),
-    fAnim
-      .add(params, "transition", 0.05, 1)
-      .name("Propagation Width")
-      .onChange(U("uTransition")),
-    fAnim
-      .add(params, "animate")
-      .name("Auto-Animate")
-      .onChange(() => notifyDesignStateChange()),
-  ];
-  // One-shot bloom playback, independent of the Auto-Animate loop.
-  let playStart: number | null = null;
-  fAnim
-    .add({ play: () => (playStart = clock.getElapsedTime()) }, "play")
-    .name("▶ Play");
-
-  const fStyle = gui.addFolder("Render Style");
-  const renderStyleCtrls = [
-    fStyle
-    .add(params, "flat")
-    .name("Flat / Tone Shading")
-      .onChange((v: boolean) => {
-        uniforms.uFlat.value = v ? 1 : 0;
-        notifyDesignStateChange();
-      }),
-  ];
-  fStyle.close();
-
   const refreshDesignControllers = () => {
     phyllotaxisCtrls.forEach((ctrl) => ctrl.updateDisplay());
     windCtrls.forEach((ctrl) => ctrl.updateDisplay());
@@ -842,18 +742,50 @@ void main() {
     stemCtrls.forEach((ctrl) => ctrl.updateDisplay());
   };
 
-  const fStem = gui.addFolder("Stem & Leaves");
-  stemCtrls = [
-    fStem.add(stemParams, "show").name("Show Stem").onChange(buildStem),
-    fStem.add(stemParams, "length", 0.8, 3).name("Stem Length").onChange(buildStem),
-    fStem.add(stemParams, "leaves").name("Show Leaves").onChange(buildStem),
-  ];
-  fStem.close();
+  const resetArrangementParams = () => {
+    params.numPetals = initialParams.numPetals;
+    params.goldenAngle = initialParams.goldenAngle;
+    params.radius = initialParams.radius;
+    params.radiusBias = initialParams.radiusBias;
+    params.height = initialParams.height;
+    params.heightBias = initialParams.heightBias;
+    params.scaleInner = initialParams.scaleInner;
+    params.tiltInner = initialParams.tiltInner;
+    params.outAngle = initialParams.outAngle;
+    params.tiltBias = initialParams.tiltBias;
+    refreshDesignControllers();
+    buildFlower();
+  };
 
-  // Reset every control to its default, then leave the flower fully bloomed
-  // (its final state) rather than closed back to the bud.
+  const resetWindParams = () => {
+    params.windAmp = initialParams.windAmp;
+    params.windSpeed = initialParams.windSpeed;
+    params.windHeading = initialParams.windHeading;
+    syncShapeUniforms();
+    refreshDesignControllers();
+    notifyDesignStateChange();
+  };
+
+  const resetNaturalDetailParams = () => {
+    params.jitter = initialParams.jitter;
+    params.shellGap = initialParams.shellGap;
+    params.noiseAmp = initialParams.noiseAmp;
+    params.noiseFreq = initialParams.noiseFreq;
+    syncShapeUniforms();
+    refreshDesignControllers();
+    buildFlower();
+  };
+
+  // Reset every design value to its initial default, then leave the flower
+  // fully bloomed rather than closed back to the bud.
   const resetAllDesign = () => {
-    gui.reset();
+    Object.assign(params, initialParams);
+    Object.assign(stemParams, initialStemParams);
+    playStart = null;
+    bakeRamps();
+    syncShapeUniforms();
+    buildFlower();
+    buildStem();
     params.bloom = params.bloomMax;
     applyBloom(params.bloom);
     refreshDesignControllers();
@@ -865,73 +797,197 @@ void main() {
   // so a single petal is easy to study.
   const resetPetalView = () => {
     resetAllDesign();
-    numPetalsCtrl.setValue(PETAL_MIN); // rebuilds via onChange + syncs display
+    params.numPetals = PETAL_MIN;
+    refreshDesignControllers();
+    buildFlower();
   };
 
-  // ===== Tabbed panel =====
-  // The left "Option Tab" rail drives which folder's controls the right
-  // "Control Bar" shows; only the active folder is mounted at a time.
-  let tabsCleanup: (() => void) | null = null;
-  if (tabsContainer) {
-    const tabFolders = gui.folders; // top-level folders, in creation order
-    resetCtrl.domElement.style.display = "none"; // reset moves into the rail
-    const tabButtons: HTMLButtonElement[] = [];
-    const selectTab = (active: number) => {
-      tabFolders.forEach((folder, i) => {
-        folder.domElement.style.display = i === active ? "" : "none";
-        if (i === active) folder.open();
-      });
-      tabButtons.forEach((btn, i) =>
-        btn.classList.toggle("active", i === active),
-      );
-      options.onActiveDesignTabChange?.(
-        tabFolders[active]?.$title.textContent ?? "",
-      );
+  if (guiContainer) {
+    const gui = new GUI({ container: guiContainer });
+    const stopNumberWheelAdjust = (event: WheelEvent) => {
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        target.closest(".lil-controller.lil-number")
+      ) {
+        event.stopPropagation();
+      }
     };
-    tabFolders.forEach((folder, i) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "gui-tab";
-      btn.textContent = folder.$title.textContent ?? "";
-      btn.addEventListener("click", () => selectTab(i));
-      tabsContainer.appendChild(btn);
-      tabButtons.push(btn);
+    guiContainer.addEventListener("wheel", stopNumberWheelAdjust, {
+      capture: true,
     });
-    const resetBtn = document.createElement("button");
-    resetBtn.type = "button";
-    resetBtn.className = "demo-chip demo-chip--reset gui-reset";
-    resetBtn.textContent = "↺ Reset";
-    resetBtn.addEventListener("click", resetAllDesign);
-    tabsContainer.appendChild(resetBtn);
-
-    const petalReset = document.createElement("button");
-    petalReset.type = "button";
-    petalReset.className = "demo-chip demo-chip--reset gui-section-reset";
-    petalReset.textContent = "↺ Reset Petal";
-    petalReset.addEventListener("click", resetPetalView);
-    tabsContainer.appendChild(petalReset);
-
-    // These two are presenter-only: keep them hidden and reveal the pair only
-    // while Option/Alt is held, so end users never see them.
-    const revealTools = (e: KeyboardEvent) =>
-      tabsContainer.classList.toggle("reveal-tools", e.altKey);
-    const hideTools = () => tabsContainer.classList.remove("reveal-tools");
-    window.addEventListener("keydown", revealTools);
-    window.addEventListener("keyup", revealTools);
-    window.addEventListener("blur", hideTools);
-    tabsCleanup = () => {
-      window.removeEventListener("keydown", revealTools);
-      window.removeEventListener("keyup", revealTools);
-      window.removeEventListener("blur", hideTools);
+    guiCleanup = () => {
+      guiContainer.removeEventListener("wheel", stopNumberWheelAdjust, {
+        capture: true,
+      });
+      gui.destroy();
     };
 
-    const initialTab = Math.max(
-      0,
-      tabFolders.findIndex(
-        (folder) => folder.$title.textContent === "Petal Geometry",
-      ),
-    );
-    selectTab(initialTab);
+    const resetCtrl = gui
+      .add({ reset: resetAllDesign }, "reset")
+      .name("↺ Reset All");
+
+    const fPetal = gui.addFolder("Petal Geometry");
+
+    // 3D Form: how that flat petal curls and bends in space.
+    const fTransform = fPetal.addFolder("3D Form");
+    petalGeometryCtrls = [
+      fTransform.add(params, "curlOpen", -1.5, 1).name("Lengthwise Curl").onChange(shapeU("uCurlOpen")).decimals(1),
+      fTransform.add(params, "curlBias", 0.3, 4).name("Curl Focus").onChange(shapeBake).decimals(1),
+      fTransform.add(params, "cup", 0, 1.5).name("Cup Depth").onChange(shapeU("uCup")).decimals(1),
+      fTransform.add(params, "sideCurl", -3, 3).name("Edge Roll").onChange(shapeU("uSideCurl")).decimals(1),
+      fTransform.add(params, "waveAmp", 0, 0.08).name("Edge Wave").onChange(shapeU("uWaveAmp")).decimals(1),
+      fTransform.add(params, "asym", -0.4, 0.4).name("Asymmetry").onChange(shapeU("uAsym")).decimals(1),
+    ];
+
+    const fPhy = gui.addFolder("Phyllotaxis Layout");
+    phyllotaxisCtrls = [
+      fPhy
+        .add(params, "numPetals", PETAL_MIN, 150, 1)
+        .name("Petals Count")
+        .onChange(buildFlower),
+      fPhy.add(params, "goldenAngle", 90, 180, 0.1).name("Golden Angle").onChange(buildFlower),
+      fPhy.add(params, "radius", 0.1, 1.5).name("Base Radius").onChange(buildFlower),
+      fPhy.add(params, "radiusBias", 0.3, 3).name("Radius Distribution").onChange(buildFlower),
+      fPhy.add(params, "height", 0, 1).name("Receptacle Height").onChange(buildFlower),
+      fPhy.add(params, "heightBias", 0.3, 3).name("Height Distribution").onChange(buildFlower),
+      fPhy.add(params, "scaleInner", 0.1, 1).name("Inner Scale").onChange(buildFlower),
+      fPhy.add(params, "tiltInner", -0.5, 1.5).name("Inner Tilt").onChange(buildFlower),
+      fPhy.add(params, "outAngle", 0, 120).name("Outer Angle (Max)").onChange(buildFlower),
+      fPhy.add(params, "tiltBias", 0.5, 6).name("Tilt Distribution").onChange(buildFlower),
+    ];
+    fPhy.close();
+
+    const fDetail = gui.addFolder("Wind & Jitter");
+    windCtrls = [
+      fDetail.add(params, "jitter", 0, 0.4).name("Petal Jitter").onChange(buildFlower),
+      fDetail.add(params, "shellGap", 0, 0.5).name("Shell Gap (Closed)").onChange(U("uShellGap")),
+      fDetail.add(params, "noiseAmp", 0, 0.12).name("Surface Noise Amp").onChange(U("uNoiseAmp")),
+      fDetail.add(params, "noiseFreq", 1, 15).name("Surface Noise Freq").onChange(U("uNoiseFreq")),
+      fDetail.add(params, "windAmp", 0, 0.5).name("Wind Amplitude").onChange(U("uWindAmp")),
+      fDetail.add(params, "windSpeed", 0, 4).name("Wind Speed").onChange(U("uWindSpeed")),
+      fDetail
+        .add(params, "windHeading", 0, 360)
+        .name("Wind Direction")
+        .onChange((v: number) => {
+          uniforms.uWindHeading.value = (v * Math.PI) / 180;
+          notifyDesignStateChange();
+        }),
+    ];
+    fDetail.close();
+
+    const fAnim = gui.addFolder("Animation");
+    animationCtrls = [
+      fAnim
+        .add(params, "bloom", 0, 1)
+        .name("Bloom Progress")
+        .onChange((v: number) => {
+          applyBloom(v);
+          notifyDesignStateChange();
+        })
+        .listen(),
+      fAnim
+        .add(params, "bloomMax", 0.5, 1)
+        .name("Bloom Limit")
+        .onChange(() => notifyDesignStateChange()),
+      fAnim
+        .add(params, "transition", 0.05, 1)
+        .name("Propagation Width")
+        .onChange(U("uTransition")),
+      fAnim
+        .add(params, "animate")
+        .name("Auto-Animate")
+        .onChange(() => notifyDesignStateChange()),
+    ];
+    // One-shot bloom playback, independent of the Auto-Animate loop.
+    fAnim
+      .add({ play: () => (playStart = sceneTimer.getElapsed()) }, "play")
+      .name("▶ Play");
+
+    const fStyle = gui.addFolder("Render Style");
+    renderStyleCtrls = [
+      fStyle
+        .add(params, "flat")
+        .name("Flat / Tone Shading")
+        .onChange((v: boolean) => {
+          uniforms.uFlat.value = v ? 1 : 0;
+          notifyDesignStateChange();
+        }),
+    ];
+    fStyle.close();
+
+    const fStem = gui.addFolder("Stem & Leaves");
+    stemCtrls = [
+      fStem.add(stemParams, "show").name("Show Stem").onChange(buildStem),
+      fStem.add(stemParams, "length", 0.8, 3).name("Stem Length").onChange(buildStem),
+      fStem.add(stemParams, "leaves").name("Show Leaves").onChange(buildStem),
+    ];
+    fStem.close();
+
+    // ===== Tabbed panel =====
+    // The left "Option Tab" rail drives which folder's controls the right
+    // "Control Bar" shows; only the active folder is mounted at a time.
+    if (tabsContainer) {
+      const tabFolders = gui.folders; // top-level folders, in creation order
+      resetCtrl.domElement.style.display = "none"; // reset moves into the rail
+      const tabButtons: HTMLButtonElement[] = [];
+      const selectTab = (active: number) => {
+        tabFolders.forEach((folder, i) => {
+          folder.domElement.style.display = i === active ? "" : "none";
+          if (i === active) folder.open();
+        });
+        tabButtons.forEach((btn, i) =>
+          btn.classList.toggle("active", i === active),
+        );
+        options.onActiveDesignTabChange?.(
+          tabFolders[active]?.$title.textContent ?? "",
+        );
+      };
+      tabFolders.forEach((folder, i) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "gui-tab";
+        btn.textContent = folder.$title.textContent ?? "";
+        btn.addEventListener("click", () => selectTab(i));
+        tabsContainer.appendChild(btn);
+        tabButtons.push(btn);
+      });
+      const resetBtn = document.createElement("button");
+      resetBtn.type = "button";
+      resetBtn.className = "demo-chip demo-chip--reset gui-reset";
+      resetBtn.textContent = "↺ Reset";
+      resetBtn.addEventListener("click", resetAllDesign);
+      tabsContainer.appendChild(resetBtn);
+
+      const petalReset = document.createElement("button");
+      petalReset.type = "button";
+      petalReset.className = "demo-chip demo-chip--reset gui-section-reset";
+      petalReset.textContent = "↺ Reset Petal";
+      petalReset.addEventListener("click", resetPetalView);
+      tabsContainer.appendChild(petalReset);
+
+      // These two are presenter-only: keep them hidden and reveal the pair only
+      // while Option/Alt is held, so end users never see them.
+      const revealTools = (e: KeyboardEvent) =>
+        tabsContainer.classList.toggle("reveal-tools", e.altKey);
+      const hideTools = () => tabsContainer.classList.remove("reveal-tools");
+      window.addEventListener("keydown", revealTools);
+      window.addEventListener("keyup", revealTools);
+      window.addEventListener("blur", hideTools);
+      tabsCleanup = () => {
+        window.removeEventListener("keydown", revealTools);
+        window.removeEventListener("keyup", revealTools);
+        window.removeEventListener("blur", hideTools);
+      };
+
+      const initialTab = Math.max(
+        0,
+        tabFolders.findIndex(
+          (folder) => folder.$title.textContent === "Petal Geometry",
+        ),
+      );
+      selectTab(initialTab);
+    }
   }
 
   notifyPetalShapeChange();
@@ -953,10 +1009,13 @@ void main() {
   };
   window.addEventListener("resize", onResize);
 
-  const clock = new THREE.Clock();
+  const sceneTimer = new THREE.Timer();
+  sceneTimer.connect(document);
   // The live render loop, kept as a named fn so the export pipeline can pause it
   // (renderFrame drives the canvas deterministically) and resume it afterwards.
   const renderLoop = () => {
+    sceneTimer.update();
+    const elapsed = sceneTimer.getElapsed();
     if (pendingResize) {
       const { w, h } = pendingResize;
       camera.aspect = w / h;
@@ -964,14 +1023,14 @@ void main() {
       renderer.setSize(w, h);
       pendingResize = null;
     }
-    uniforms.uTime.value = clock.getElapsedTime();
+    uniforms.uTime.value = elapsed;
     if (params.animate) {
-      const t = clock.getElapsedTime() % 11;
+      const t = elapsed % 11;
       params.bloom = easedBloom(t / BLOOM_DURATION_S);
       applyBloom(params.bloom);
       notifyAnimationStateChange();
     } else if (playStart !== null) {
-      const t = clock.getElapsedTime() - playStart;
+      const t = elapsed - playStart;
       params.bloom = easedBloom(t / BLOOM_DURATION_S);
       applyBloom(params.bloom);
       notifyAnimationStateChange();
@@ -1001,7 +1060,7 @@ void main() {
     /** One-shot replay of the bud -> full bloom; drives the finale Bloom button. */
     playBloom() {
       if (params.animate) return;
-      playStart = clock.getElapsedTime();
+      playStart = sceneTimer.getElapsed();
     },
     /**
      * Set the initial camera position (the orbit target stays on the flower
@@ -1198,6 +1257,15 @@ void main() {
     resetPetalGeometry() {
       resetPetalGeometryParams();
     },
+    resetArrangement() {
+      resetArrangementParams();
+    },
+    resetWind() {
+      resetWindParams();
+    },
+    resetNaturalDetail() {
+      resetNaturalDetailParams();
+    },
     resetAll() {
       resetAllDesign();
     },
@@ -1359,10 +1427,7 @@ void main() {
       renderer.setAnimationLoop(null);
       ro.disconnect();
       window.removeEventListener("resize", onResize);
-      guiContainer.removeEventListener("wheel", stopNumberWheelAdjust, {
-        capture: true,
-      });
-      gui.destroy();
+      guiCleanup?.();
       tabsCleanup?.();
       if (tabsContainer) tabsContainer.replaceChildren();
       controls.dispose();
@@ -1375,6 +1440,7 @@ void main() {
       leafMat.dispose();
       mat.dispose();
       rampTex.dispose();
+      sceneTimer.dispose();
       renderer.dispose();
       renderer.domElement.remove();
     },

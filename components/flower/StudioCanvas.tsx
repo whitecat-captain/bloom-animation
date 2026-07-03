@@ -146,8 +146,6 @@ function timestamp() {
 
 export default function StudioCanvas() {
   const canvasRef = useRef<HTMLDivElement>(null);
-  const guiRef = useRef<HTMLDivElement>(null);
-  const tabsRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<FlowerSceneApi | null>(null);
 
@@ -236,14 +234,14 @@ export default function StudioCanvas() {
   // Clean up any running preview loop on unmount.
   useEffect(() => () => stopPlay(), []);
 
-  // Boot the scene once. Same engine + designer panel as the story page, minus
-  // all the scroll wiring — the flower just sits fully bloomed and orbitable.
+  // Boot the scene once. Studio uses its Tweakpane design sheet instead of the
+  // legacy lil-gui designer panel used by the story page.
   useEffect(() => {
-    if (!canvasRef.current || !guiRef.current) return;
+    if (!canvasRef.current) return;
     const scene = createFlowerScene(
       canvasRef.current,
-      guiRef.current,
-      tabsRef.current,
+      null,
+      null,
       {
         onPetalShapeChange: setPetalShape,
         onDesignStateChange: setDesignState,
@@ -461,30 +459,15 @@ export default function StudioCanvas() {
   }
 
   function handleResetArrangement() {
-    const scene = sceneRef.current;
-    if (!scene) return;
-    const defaults = DEFAULT_DESIGN_STATE.phyllotaxis;
-    (Object.keys(defaults) as PhyllotaxisKey[]).forEach((key) => {
-      scene.setPhyllotaxis(key, defaults[key]);
-    });
+    sceneRef.current?.resetArrangement();
   }
 
   function handleResetWind() {
-    const scene = sceneRef.current;
-    if (!scene) return;
-    const defaults = DEFAULT_DESIGN_STATE.wind;
-    (["windAmp", "windSpeed", "windHeading"] as const).forEach((key) => {
-      scene.setWind(key, defaults[key]);
-    });
+    sceneRef.current?.resetWind();
   }
 
   function handleResetNaturalDetail() {
-    const scene = sceneRef.current;
-    if (!scene) return;
-    const defaults = DEFAULT_DESIGN_STATE.wind;
-    (["jitter", "noiseAmp", "noiseFreq", "shellGap"] as const).forEach((key) => {
-      scene.setWind(key, defaults[key]);
-    });
+    sceneRef.current?.resetNaturalDetail();
   }
 
   function handleDurationChange(nextDuration: number) {
@@ -579,14 +562,6 @@ export default function StudioCanvas() {
           <span className="studio-export-frame-corner is-bottom-right" />
         </div>
       )}
-
-      {/* Parameter designer — the engine mounts its tabbed lil-gui here. */}
-      <div className="gui-container liquid-glass-strong">
-        <div ref={tabsRef} className="gui-tabs" />
-        <div className="studio-design-panel-main">
-          <div ref={guiRef} className="gui-scroll" />
-        </div>
-      </div>
 
       <div ref={sheetRef} className="studio-sheet">
         {sheetPages && (
