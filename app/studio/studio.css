@@ -95,26 +95,34 @@
 .studio-design-preview-slot .studio-petal-preview {
   flex: initial;
 }
-.studio-petal-reset {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 2;
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
+.studio-design-preview-reset-slot {
+  min-width: 0;
+  margin: 0 0 4px;
+  padding: 0 4px;
+}
+.studio-design-preview-reset-button {
+  width: 100%;
+  min-height: 24px;
   appearance: none;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.82);
-  font: 600 15px/1 "Inter", system-ui, sans-serif;
+  border: 0;
+  border-radius: var(--tp-blade-border-radius);
+  background-color: var(--tp-button-background-color);
+  color: var(--tp-button-foreground-color);
+  font-family: var(--tp-base-font-family);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
   cursor: pointer;
 }
-.studio-petal-reset:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
+.studio-design-preview-reset-button:hover {
+  background-color: var(--tp-button-background-color-hover);
+}
+.studio-design-preview-reset-button:focus-visible {
+  outline: 2px solid rgba(41, 35, 214, 0.38);
+  outline-offset: 2px;
+}
+.studio-design-preview-reset-button:active {
+  background-color: var(--tp-button-background-color-active);
 }
 .studio-petal-preview-canvas {
   width: 100%;
@@ -124,17 +132,6 @@
   display: block;
   width: 100% !important;
   height: 100% !important;
-}
-.studio-design-pane {
-  width: 100%;
-  flex: 0 1 min(46vh, 430px);
-  min-width: 0;
-  min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: none;
-}
-.studio-design-pane::-webkit-scrollbar {
-  display: none;
 }
 /* Transparent mode: checkerboard shows through the alpha-cleared canvas. */
 .studio-stage.is-transparent {
@@ -201,43 +198,24 @@
   transform: translate(-50%, -50%);
 }
 
-/* --- top-left wordmark --- */
-.studio-head {
-  position: fixed;
-  top: 26px;
-  left: 28px;
-  z-index: 12;
-  pointer-events: none;
-}
-/* Decorative wordmark: same monospace + size as the panel masthead heading,
-   single line, kept light and subtle over the dark scene. */
-.studio-title {
-  margin: 0;
-  font-family: "Space Mono", ui-monospace, "SFMono-Regular", monospace;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: rgba(255, 255, 255, 0.82);
-}
-
 /* --- Tweakpane sheet mounts --- */
-.studio-sheet-stack {
+.studio-sheet {
   position: fixed;
   top: 24px;
   right: 24px;
   z-index: 14;
   width: 320px;
   max-height: calc(100vh - 48px);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
   min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
 }
 
-.studio-export,
-.studio-design-pane {
+.studio-sheet::-webkit-scrollbar {
+  display: none;
+}
+
+.studio-sheet {
   --tp-base-background-color: #f1eae0;
   --tp-base-border-radius: 5px;
   --tp-base-font-family: "Space Mono", ui-monospace, "SFMono-Regular", monospace;
@@ -270,65 +248,75 @@
   --tp-monitor-foreground-color: rgba(41, 35, 214, 0.85);
 }
 
-/* --- Tweakpane export panel mount (top-right) --- */
-.studio-export {
-  width: 100%;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: none;
-}
-
-.studio-export::-webkit-scrollbar {
-  display: none;
-}
-
-.studio-export > .tp-rotv,
-.studio-design-pane > .tp-rotv {
+.studio-sheet > .tp-rotv {
   width: 100%;
   border: 1px solid rgba(41, 35, 214, 0.22);
-}
-
-.studio-export > .tp-rotv,
-.studio-design-pane > .tp-rotv {
   box-shadow: 0 18px 44px rgba(7, 8, 32, 0.22);
 }
 
-.studio-export .tp-rotv_b,
-.studio-export .tp-fldv_b,
-.studio-design-pane .tp-rotv_b,
-.studio-design-pane .tp-fldv_b {
+.studio-sheet .tp-rotv_b,
+.studio-sheet .tp-fldv_b {
   font-weight: 700;
 }
 
-.studio-export .tp-btnv_b,
-.studio-design-pane .tp-btnv_b {
+.studio-sheet .tp-tbiv_t {
+  color: #2b276f;
+  font-weight: 700;
+  opacity: 1;
+}
+
+.studio-sheet .tp-tabv_t {
+  color: rgba(31, 28, 111, 0.22);
+}
+
+.studio-sheet .tp-tbiv_b::before {
+  border-radius: var(--tp-blade-border-radius) var(--tp-blade-border-radius) 0 0;
+  background-color: #d9d4ec;
+  box-shadow: inset 0 0 0 1px rgba(43, 39, 111, 0.14);
+}
+
+.studio-sheet .tp-tbiv_b:hover::before {
+  background-color: #cbc5e6;
+}
+
+.studio-sheet .tp-tbiv.tp-tbiv-sel .tp-tbiv_b::before {
+  background-color: #19165a;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 251, 245, 0.12),
+    0 1px 2px rgba(7, 8, 32, 0.16);
+}
+
+.studio-sheet .tp-tbiv.tp-tbiv-sel .tp-tbiv_t {
+  color: #fffaf3;
+}
+
+.studio-sheet .tp-btnv_b {
   font-weight: 700;
 }
 
-.studio-export .studio-export-preview-button .tp-btnv_b {
+.studio-sheet .studio-export-preview-button .tp-btnv_b {
   background-color: rgba(41, 35, 214, 0.1);
   box-shadow: inset 0 0 0 1px rgba(41, 35, 214, 0.2);
   color: rgba(41, 35, 214, 0.85);
 }
 
-.studio-export .studio-export-preview-button .tp-btnv_b:hover {
+.studio-sheet .studio-export-preview-button .tp-btnv_b:hover {
   background-color: rgba(41, 35, 214, 0.14);
 }
 
-.studio-export .studio-export-preview-button .tp-btnv_b:focus {
+.studio-sheet .studio-export-preview-button .tp-btnv_b:focus {
   background-color: rgba(41, 35, 214, 0.16);
 }
 
-.studio-export .studio-export-preview-button .tp-btnv_b:active {
+.studio-sheet .studio-export-preview-button .tp-btnv_b:active {
   background-color: rgba(41, 35, 214, 0.2);
 }
 
-.studio-export .studio-sheet-control-slot {
+.studio-sheet .studio-sheet-control-slot {
   min-width: 0;
 }
 
-.studio-export .studio-sheet-control {
+.studio-sheet .studio-sheet-control {
   display: flex;
   min-height: 32px;
   align-items: center;
@@ -341,7 +329,7 @@
   line-height: 1.2;
 }
 
-.studio-export .studio-sheet-control-label {
+.studio-sheet .studio-sheet-control-label {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -351,12 +339,12 @@
   white-space: nowrap;
 }
 
-.studio-export .studio-sheet-control-value {
+.studio-sheet .studio-sheet-control-value {
   flex: 0 0 var(--tp-blade-value-width);
   min-width: 0;
 }
 
-.studio-export .studio-two-button-select {
+.studio-sheet .studio-two-button-select {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 2px;
@@ -366,8 +354,8 @@
   box-shadow: inset 0 0 0 1px rgba(41, 35, 214, 0.14);
 }
 
-.studio-export .studio-two-button-select-option,
-.studio-export .studio-switch-button {
+.studio-sheet .studio-two-button-select-option,
+.studio-sheet .studio-switch-button {
   border: 0;
   border-radius: 4px;
   font-family: var(--tp-base-font-family);
@@ -383,7 +371,7 @@
     transform 120ms ease;
 }
 
-.studio-export .studio-two-button-select-option {
+.studio-sheet .studio-two-button-select-option {
   min-width: 0;
   height: 22px;
   padding: 0 6px;
@@ -394,27 +382,27 @@
   white-space: nowrap;
 }
 
-.studio-export .studio-two-button-select-option:hover {
+.studio-sheet .studio-two-button-select-option:hover {
   background-color: var(--tp-input-background-color-hover);
 }
 
-.studio-export .studio-two-button-select-option.is-selected {
+.studio-sheet .studio-two-button-select-option.is-selected {
   background-color: var(--tp-button-background-color);
   color: var(--tp-button-foreground-color);
   box-shadow: 0 1px 3px rgba(41, 35, 214, 0.22);
 }
 
-.studio-export .studio-two-button-select-option.is-selected:hover {
+.studio-sheet .studio-two-button-select-option.is-selected:hover {
   background-color: var(--tp-button-background-color-hover);
 }
 
-.studio-export .studio-two-button-select-option:focus-visible,
-.studio-export .studio-switch-button:focus-visible {
+.studio-sheet .studio-two-button-select-option:focus-visible,
+.studio-sheet .studio-switch-button:focus-visible {
   outline: 2px solid rgba(41, 35, 214, 0.38);
   outline-offset: 2px;
 }
 
-.studio-export .studio-switch-button {
+.studio-sheet .studio-switch-button {
   display: inline-flex;
   width: 68px;
   height: 24px;
@@ -426,26 +414,26 @@
   color: var(--tp-input-foreground-color);
 }
 
-.studio-export .studio-switch-button:hover {
+.studio-sheet .studio-switch-button:hover {
   background-color: var(--tp-input-background-color-hover);
 }
 
-.studio-export .studio-switch-button.is-checked {
+.studio-sheet .studio-switch-button.is-checked {
   background-color: var(--tp-button-background-color);
   box-shadow: inset 0 0 0 1px rgba(41, 35, 214, 0.22);
   color: var(--tp-button-foreground-color);
 }
 
-.studio-export .studio-switch-button.is-checked:hover {
+.studio-sheet .studio-switch-button.is-checked:hover {
   background-color: var(--tp-button-background-color-hover);
 }
 
-.studio-export .studio-switch-button-text {
+.studio-sheet .studio-switch-button-text {
   width: 24px;
   text-align: left;
 }
 
-.studio-export .studio-switch-button-track {
+.studio-sheet .studio-switch-button-track {
   position: relative;
   width: 24px;
   height: 14px;
@@ -454,11 +442,11 @@
   background-color: rgba(41, 35, 214, 0.2);
 }
 
-.studio-export .studio-switch-button.is-checked .studio-switch-button-track {
+.studio-sheet .studio-switch-button.is-checked .studio-switch-button-track {
   background-color: rgba(255, 251, 245, 0.36);
 }
 
-.studio-export .studio-switch-button-thumb {
+.studio-sheet .studio-switch-button-thumb {
   position: absolute;
   top: 3px;
   left: 3px;
@@ -469,18 +457,17 @@
   transition: transform 120ms ease;
 }
 
-.studio-export .studio-switch-button.is-checked .studio-switch-button-thumb {
+.studio-sheet .studio-switch-button.is-checked .studio-switch-button-thumb {
   transform: translateX(10px);
 }
 
-.studio-export .studio-two-button-select-option:disabled,
-.studio-export .studio-switch-button:disabled {
+.studio-sheet .studio-two-button-select-option:disabled,
+.studio-sheet .studio-switch-button:disabled {
   cursor: not-allowed;
   opacity: 0.52;
 }
 
-.studio-export .tp-lstv_s,
-.studio-design-pane .tp-lstv_s {
+.studio-sheet .tp-lstv_s {
   -moz-appearance: menulist;
   -webkit-appearance: menulist;
   appearance: auto;
@@ -489,28 +476,23 @@
   font-weight: 500;
 }
 
-.studio-export .tp-lstv_s:hover,
-.studio-design-pane .tp-lstv_s:hover {
+.studio-sheet .tp-lstv_s:hover {
   background-color: var(--tp-input-background-color-hover);
 }
 
-.studio-export .tp-lstv_s:focus,
-.studio-design-pane .tp-lstv_s:focus {
+.studio-sheet .tp-lstv_s:focus {
   background-color: var(--tp-input-background-color-focus);
 }
 
-.studio-export .tp-lstv_s:active,
-.studio-design-pane .tp-lstv_s:active {
+.studio-sheet .tp-lstv_s:active {
   background-color: var(--tp-input-background-color-active);
 }
 
-.studio-export .tp-lstv_m,
-.studio-design-pane .tp-lstv_m {
+.studio-sheet .tp-lstv_m {
   display: none;
 }
 
-.studio-export .tp-lstv_s option,
-.studio-design-pane .tp-lstv_s option {
+.studio-sheet .tp-lstv_s option {
   background-color: initial;
   color: initial;
 }
@@ -526,19 +508,12 @@
   .studio-petal-preview {
     flex-basis: 96px;
   }
-  .studio-sheet-stack {
+  .studio-sheet {
     top: auto;
     bottom: calc(var(--panel-h) + var(--panel-gap) + 14px);
     right: 12px;
     left: 12px;
     width: auto;
     max-height: 44vh;
-  }
-  .studio-design-pane {
-    flex-basis: 22vh;
-  }
-  .studio-head {
-    top: 16px;
-    left: 16px;
   }
 }

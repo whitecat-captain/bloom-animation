@@ -3,10 +3,10 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import {
-  Pane,
   type BladeApi,
   type ButtonApi,
   type FolderApi,
+  type TabPageApi,
 } from "tweakpane";
 import type { FlowerDesignState, PetalShapeState } from "./flowerScene";
 
@@ -54,10 +54,8 @@ type DesignPaneBindings = Record<
   | "preset",
   RefreshableBlade
 > & {
-  resetButton: ButtonApi;
   playButton: ButtonApi;
   resetAllButton: ButtonApi;
-  resetPetalButton: ButtonApi;
 };
 
 type DesignPaneRoots = {
@@ -70,6 +68,7 @@ type DesignPanePreset = {
 };
 
 type StudioDesignPaneProps = {
+  pane: TabPageApi;
   shape: PetalShapeState;
   designState: FlowerDesignState;
   presets: DesignPanePreset[];
@@ -87,7 +86,6 @@ type StudioDesignPaneProps = {
   ) => void;
   onPlayAnimation: () => void;
   onResetAll: () => void;
-  onResetPetal: () => void;
   onStemChange: <K extends StemKey>(
     key: K,
     value: FlowerDesignState["stem"][K],
@@ -105,6 +103,7 @@ function optionMap<T extends string | number>(
 }
 
 export default function StudioDesignPane({
+  pane,
   shape,
   designState,
   presets,
@@ -119,12 +118,10 @@ export default function StudioDesignPane({
   onAnimationChange,
   onPlayAnimation,
   onResetAll,
-  onResetPetal,
   onStemChange,
   onResetPetalGeometry,
 }: StudioDesignPaneProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const paneRef = useRef<Pane | null>(null);
+  const paneRef = useRef<TabPageApi | null>(null);
   const bindingsRef = useRef<DesignPaneBindings | null>(null);
   const rootsRef = useRef<DesignPaneRoots | null>(null);
   const callbacksRef = useRef({
@@ -136,7 +133,6 @@ export default function StudioDesignPane({
     onAnimationChange,
     onPlayAnimation,
     onResetAll,
-    onResetPetal,
     onStemChange,
     onResetPetalGeometry,
   });
@@ -165,7 +161,6 @@ export default function StudioDesignPane({
       onAnimationChange,
       onPlayAnimation,
       onResetAll,
-      onResetPetal,
       onStemChange,
       onResetPetalGeometry,
     };
@@ -176,7 +171,6 @@ export default function StudioDesignPane({
     onPlayAnimation,
     onPresetChange,
     onResetAll,
-    onResetPetal,
     onRenderStyleChange,
     onResetPetalGeometry,
     onStemChange,
@@ -184,20 +178,14 @@ export default function StudioDesignPane({
   ]);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
     const params = paramsRef.current;
-    const pane = new Pane({
-      container,
-      title: "Design Sheet",
-      expanded: true,
-    });
+    const createdBlades: BladeApi[] = [];
 
     const renderStyle = pane.addFolder({
       title: "Render Style",
       expanded: true,
     });
+    createdBlades.push(renderStyle);
     const preset = renderStyle.addBinding(params, "preset", {
       label: "Preset",
       options: optionMap(presets.map((presetItem, index) => ({
@@ -219,8 +207,19 @@ export default function StudioDesignPane({
       title: "Petal Geometry",
       expanded: true,
     });
+    createdBlades.push(petalGeometry);
     const previewSlot = document.createElement("div");
     previewSlot.className = "studio-design-preview-slot";
+    const previewResetSlot = document.createElement("div");
+    previewResetSlot.className = "studio-design-preview-reset-slot";
+    const previewResetButton = document.createElement("button");
+    previewResetButton.type = "button";
+    previewResetButton.className = "studio-design-preview-reset-button";
+    previewResetButton.textContent = "Reset Petal Geometry";
+    previewResetButton.addEventListener("click", () => {
+      callbacksRef.current.onResetPetalGeometry();
+    });
+    previewResetSlot.appendChild(previewResetButton);
     const outlineSlot = document.createElement("div");
     outlineSlot.className = "studio-design-outline-slot";
     const outline = petalGeometry.addFolder({
@@ -235,6 +234,10 @@ export default function StudioDesignPane({
     const getFolderContent = (folder: FolderApi) =>
       folder.element.querySelector(":scope > .tp-fldv_c");
     getFolderContent(petalGeometry)?.insertBefore(previewSlot, outline.element);
+    getFolderContent(petalGeometry)?.insertBefore(
+      previewResetSlot,
+      outline.element,
+    );
     getFolderContent(outline)?.appendChild(outlineSlot);
 
     const previewRoot = createRoot(previewSlot);
@@ -287,15 +290,11 @@ export default function StudioDesignPane({
     asym.on("change", (event) => {
       callbacksRef.current.onPetalFormChange("asym", event.value);
     });
-    const resetButton = petalGeometry.addButton({ title: "Reset Petal Geometry" });
-    resetButton.on("click", () => {
-      callbacksRef.current.onResetPetalGeometry();
-    });
-
     const phyllotaxis = pane.addFolder({
       title: "Phyllotaxis Layout",
       expanded: false,
     });
+    createdBlades.push(phyllotaxis);
     const numPetals = bindNumber(
       phyllotaxis,
       "numPetals",
@@ -398,6 +397,7 @@ export default function StudioDesignPane({
       title: "Wind & Jitter",
       expanded: false,
     });
+    createdBlades.push(wind);
     const jitter = bindNumber(wind, "jitter", "Petal Jitter", 0, 0.4, 0.01, 2);
     jitter.on("change", (event) => {
       callbacksRef.current.onWindChange("jitter", event.value);
@@ -431,6 +431,7 @@ export default function StudioDesignPane({
       title: "Stem & Leaves",
       expanded: false,
     });
+    createdBlades.push(stem);
     const show = stem.addBinding(params, "show", {
       label: "Show Stem",
     }) as ChangeableBlade<boolean>;
@@ -452,6 +453,7 @@ export default function StudioDesignPane({
       title: "Animation",
       expanded: false,
     });
+    createdBlades.push(animation);
     const bloom = bindNumber(animation, "bloom", "Bloom Progress", 0, 1, 0.01, 2);
     bloom.on("change", (event) => {
       callbacksRef.current.onAnimationChange("bloom", event.value);
@@ -484,12 +486,9 @@ export default function StudioDesignPane({
     });
 
     const resetAllButton = pane.addButton({ title: "Reset All" });
+    createdBlades.push(resetAllButton);
     resetAllButton.on("click", () => {
       callbacksRef.current.onResetAll();
-    });
-    const resetPetalButton = pane.addButton({ title: "Reset Petal" });
-    resetPetalButton.on("click", () => {
-      callbacksRef.current.onResetPetal();
     });
 
     paneRef.current = pane;
@@ -502,7 +501,6 @@ export default function StudioDesignPane({
       sideCurl,
       waveAmp,
       asym,
-      resetButton,
       numPetals,
       goldenAngle,
       radius,
@@ -529,7 +527,6 @@ export default function StudioDesignPane({
       animate,
       playButton,
       resetAllButton,
-      resetPetalButton,
     };
 
     return () => {
@@ -543,9 +540,15 @@ export default function StudioDesignPane({
       rootsRef.current = null;
       bindingsRef.current = null;
       paneRef.current = null;
-      pane.dispose();
+      createdBlades.forEach((blade) => {
+        try {
+          pane.remove(blade);
+        } catch {
+          // The shared root may already be disposed during page teardown.
+        }
+      });
     };
-  }, [presets]);
+  }, [pane, presets]);
 
   useEffect(() => {
     rootsRef.current?.preview.render(petalPreview);
@@ -575,7 +578,7 @@ export default function StudioDesignPane({
     });
   }, [designState, selectedPreset, shape]);
 
-  return <aside ref={containerRef} className="studio-design-pane" />;
+  return null;
 }
 
 export type {

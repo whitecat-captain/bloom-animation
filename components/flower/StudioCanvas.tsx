@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Pane, type TabPageApi } from "tweakpane";
 import {
   createFlowerScene,
   type FlowerDesignState,
@@ -27,6 +28,11 @@ import StudioDesignPane, {
 import StudioExportPane from "./StudioExportPane";
 
 type BgMode = "transparent" | "solid";
+
+type StudioSheetPages = {
+  design: TabPageApi;
+  export: TabPageApi;
+};
 
 // Resolutions are target heights; the width is derived from the live canvas
 // aspect at export time so the output frames the flower exactly as previewed.
@@ -141,6 +147,7 @@ export default function StudioCanvas() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const guiRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<FlowerSceneApi | null>(null);
 
   const [bgMode, setBgMode] = useState<BgMode>("solid");
@@ -158,6 +165,8 @@ export default function StudioCanvas() {
   const [exportKind, setExportKind] = useState<"image" | "video" | null>(null);
   const [progress, setProgress] = useState(0);
   const [previewTime, setPreviewTime] = useState(0);
+  const [sheetPages, setSheetPages] = useState<StudioSheetPages | null>(null);
+  const [petalPreviewResetKey, setPetalPreviewResetKey] = useState(0);
 
   // Duration is the export clip length. Bloom speed stays fixed to the scene's
   // bloomDuration; Preview loops that exact export-length segment until exited.
@@ -245,6 +254,29 @@ export default function StudioCanvas() {
     return () => {
       scene.dispose();
       sceneRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const container = sheetRef.current;
+    if (!container) return;
+
+    const pane = new Pane({
+      container,
+      title: "Bloom Animation Generator",
+      expanded: true,
+    });
+    const tab = pane.addTab({
+      pages: [{ title: "Design" }, { title: "Export" }],
+    });
+
+    setSheetPages({
+      design: tab.pages[0],
+      export: tab.pages[1],
+    });
+
+    return () => {
+      pane.dispose();
     };
   }, []);
 
@@ -389,6 +421,11 @@ export default function StudioCanvas() {
     sceneRef.current?.setPalette(PRESETS[index].stops);
   }
 
+  function handleResetPetalGeometry() {
+    sceneRef.current?.resetPetalGeometry();
+    setPetalPreviewResetKey((key) => key + 1);
+  }
+
   function handleDurationChange(nextDuration: number) {
     setDuration(nextDuration);
   }
@@ -409,10 +446,6 @@ export default function StudioCanvas() {
         </div>
       )}
 
-      <header className="studio-head">
-        <h1 className="studio-title">Bloom Animation Generator</h1>
-      </header>
-
       {/* Parameter designer — the engine mounts its tabbed lil-gui here. */}
       <div className="gui-container liquid-glass-strong">
         <div ref={tabsRef} className="gui-tabs" />
@@ -421,61 +454,66 @@ export default function StudioCanvas() {
         </div>
       </div>
 
-      <div className="studio-sheet-stack">
-        <StudioDesignPane
-          shape={petalShape}
-          designState={designState}
-          presets={PRESETS}
-          selectedPreset={selectedPreset}
-          outlineEditor={
-            <PetalOutlineEditor
+      <div ref={sheetRef} className="studio-sheet">
+        {sheetPages && (
+          <>
+            <StudioDesignPane
+              pane={sheetPages.design}
               shape={petalShape}
-              palette={PRESETS[selectedPreset].stops}
-              onOutlineChange={handlePetalOutlineChange}
+              designState={designState}
+              presets={PRESETS}
+              selectedPreset={selectedPreset}
+              outlineEditor={
+                <PetalOutlineEditor
+                  shape={petalShape}
+                  palette={PRESETS[selectedPreset].stops}
+                  onOutlineChange={handlePetalOutlineChange}
+                />
+              }
+              petalPreview={
+                <PetalShapePreview
+                  shape={petalShape}
+                  palette={PRESETS[selectedPreset].stops}
+                  resetViewKey={petalPreviewResetKey}
+                />
+              }
+              onPresetChange={handlePresetChange}
+              onPetalFormChange={handlePetalFormChange}
+              onPhyllotaxisChange={handlePhyllotaxisChange}
+              onWindChange={handleWindChange}
+              onRenderStyleChange={handleRenderStyleChange}
+              onAnimationChange={handleAnimationChange}
+              onPlayAnimation={() => sceneRef.current?.playBloom()}
+              onResetAll={() => sceneRef.current?.resetAll()}
+              onStemChange={handleStemChange}
+              onResetPetalGeometry={handleResetPetalGeometry}
             />
-          }
-          petalPreview={
-            <PetalShapePreview
-              shape={petalShape}
-              palette={PRESETS[selectedPreset].stops}
-              onReset={() => sceneRef.current?.resetPetalGeometry()}
+            <StudioExportPane
+              pane={sheetPages.export}
+              resolutions={RES_OPTIONS}
+              bgMode={bgMode}
+              color={color}
+              imageRes={imageRes}
+              videoRes={videoRes}
+              duration={duration}
+              showCameraFrame={showCameraFrame}
+              exporting={exporting}
+              exportKind={exportKind}
+              progress={progress}
+              previewTime={previewTime}
+              playing={playing}
+              onBgModeChange={setBgMode}
+              onColorChange={setColor}
+              onImageResChange={setImageRes}
+              onVideoResChange={setVideoRes}
+              onDurationChange={handleDurationChange}
+              onShowCameraFrameChange={setShowCameraFrame}
+              onTogglePlay={togglePlay}
+              onExportImage={handleExportImage}
+              onExportVideo={handleExportVideo}
             />
-          }
-          onPresetChange={handlePresetChange}
-          onPetalFormChange={handlePetalFormChange}
-          onPhyllotaxisChange={handlePhyllotaxisChange}
-          onWindChange={handleWindChange}
-          onRenderStyleChange={handleRenderStyleChange}
-          onAnimationChange={handleAnimationChange}
-          onPlayAnimation={() => sceneRef.current?.playBloom()}
-          onResetAll={() => sceneRef.current?.resetAll()}
-          onResetPetal={() => sceneRef.current?.resetPetal()}
-          onStemChange={handleStemChange}
-          onResetPetalGeometry={() => sceneRef.current?.resetPetalGeometry()}
-        />
-        <StudioExportPane
-          resolutions={RES_OPTIONS}
-          bgMode={bgMode}
-          color={color}
-          imageRes={imageRes}
-          videoRes={videoRes}
-          duration={duration}
-          showCameraFrame={showCameraFrame}
-          exporting={exporting}
-          exportKind={exportKind}
-          progress={progress}
-          previewTime={previewTime}
-          playing={playing}
-          onBgModeChange={setBgMode}
-          onColorChange={setColor}
-          onImageResChange={setImageRes}
-          onVideoResChange={setVideoRes}
-          onDurationChange={handleDurationChange}
-          onShowCameraFrameChange={setShowCameraFrame}
-          onTogglePlay={togglePlay}
-          onExportImage={handleExportImage}
-          onExportVideo={handleExportVideo}
-        />
+          </>
+        )}
       </div>
     </div>
   );

@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { PetalShapeState } from "./flowerScene";
 
 const STEM_WIDTH = 0.03;
 const STEM_END = 0.04;
+const DEFAULT_CAMERA_POSITION = new THREE.Vector3(0.76, 0.55, 1.9);
+const DEFAULT_CONTROLS_TARGET = new THREE.Vector3(0, 0, 0);
 type PaletteStops = [number, number, number][];
 
 function catmullRom(pts: number[], t: number) {
@@ -171,15 +173,27 @@ function makePetalPreviewGeometry(shape: PetalShapeState, palette: PaletteStops)
 export default function PetalShapePreview({
   shape,
   palette,
-  onReset,
+  resetViewKey,
 }: {
   shape: PetalShapeState;
   palette: PaletteStops;
-  onReset?: () => void;
+  resetViewKey?: number;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
   const openMeshRef = useRef<THREE.Mesh | null>(null);
   const openGuideRef = useRef<THREE.LineSegments | null>(null);
+
+  const resetPreviewView = useCallback(() => {
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    if (!camera || !controls) return;
+
+    camera.position.copy(DEFAULT_CAMERA_POSITION);
+    controls.target.copy(DEFAULT_CONTROLS_TARGET);
+    controls.update();
+  }, []);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -196,13 +210,15 @@ export default function PetalShapePreview({
     host.appendChild(renderer.domElement);
 
     const camera = new THREE.PerspectiveCamera(34, 1, 0.01, 20);
-    camera.position.set(0.76, 0.55, 1.9);
+    camera.position.copy(DEFAULT_CAMERA_POSITION);
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.enablePan = false;
     controls.minDistance = 0.75;
     controls.maxDistance = 3.2;
-    controls.target.set(0, 0, 0);
+    controls.target.copy(DEFAULT_CONTROLS_TARGET);
+    cameraRef.current = camera;
+    controlsRef.current = controls;
 
     scene.add(new THREE.HemisphereLight(0xffd6a8, 0x1b2554, 0.75));
     const key = new THREE.DirectionalLight(0xfff0d6, 3.7);
@@ -269,10 +285,16 @@ export default function PetalShapePreview({
       guideMaterial.dispose();
       renderer.dispose();
       host.removeChild(renderer.domElement);
+      cameraRef.current = null;
+      controlsRef.current = null;
       openMeshRef.current = null;
       openGuideRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    resetPreviewView();
+  }, [resetPreviewView, resetViewKey]);
 
   useEffect(() => {
     const openMesh = openMeshRef.current;
@@ -291,14 +313,6 @@ export default function PetalShapePreview({
 
   return (
     <div className="studio-petal-preview" aria-label="3D petal shape preview">
-      <button
-        type="button"
-        className="studio-petal-reset"
-        onClick={onReset}
-        aria-label="Reset petal shape"
-      >
-        ↺
-      </button>
       <div ref={hostRef} className="studio-petal-preview-canvas" />
     </div>
   );

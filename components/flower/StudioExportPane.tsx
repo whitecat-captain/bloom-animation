@@ -3,10 +3,10 @@
 import { useEffect, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import {
-  Pane,
   type BladeApi,
   type ButtonApi,
   type FolderApi,
+  type TabPageApi,
 } from "tweakpane";
 import {
   StudioSwitchButton,
@@ -68,6 +68,7 @@ type ExportPaneRoots = {
 };
 
 type StudioExportPaneProps = {
+  pane: TabPageApi;
   resolutions: StudioExportResolution[];
   bgMode: BgMode;
   color: string;
@@ -112,6 +113,7 @@ function optionMap<T extends string | number>(
 }
 
 export default function StudioExportPane({
+  pane,
   resolutions,
   bgMode,
   color,
@@ -134,8 +136,7 @@ export default function StudioExportPane({
   onExportImage,
   onExportVideo,
 }: StudioExportPaneProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const paneRef = useRef<Pane | null>(null);
+  const paneRef = useRef<TabPageApi | null>(null);
   const bindingsRef = useRef<ExportPaneBindings | null>(null);
   const rootsRef = useRef<ExportPaneRoots | null>(null);
   const callbacksRef = useRef({
@@ -187,20 +188,14 @@ export default function StudioExportPane({
   ]);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
     const params = paramsRef.current;
-    const pane = new Pane({
-      container,
-      title: "Export Sheet",
-      expanded: true,
-    });
+    const createdBlades: BladeApi[] = [];
 
     const background = pane.addFolder({
       title: "Background",
       expanded: true,
     });
+    createdBlades.push(background);
     const getFolderContent = (folder: FolderApi) =>
       folder.element.querySelector(":scope > .tp-fldv_c");
     const bgModeSlot = document.createElement("div");
@@ -223,6 +218,7 @@ export default function StudioExportPane({
       title: "Image Export",
       expanded: true,
     });
+    createdBlades.push(image);
     const imageResBinding = image.addBinding(params, "imageRes", {
       label: "Resolution",
       options: optionMap(resolutions.map((resolution, index) => ({
@@ -242,6 +238,7 @@ export default function StudioExportPane({
       title: "Video Export",
       expanded: true,
     });
+    createdBlades.push(video);
     const videoResBinding = video.addBinding(params, "videoRes", {
       label: "Resolution",
       options: optionMap(resolutions.map((resolution, index) => ({
@@ -299,6 +296,7 @@ export default function StudioExportPane({
       title: "View",
       expanded: true,
     });
+    createdBlades.push(view);
     const cameraFrameSlot = document.createElement("div");
     cameraFrameSlot.className = "studio-sheet-control-slot";
     getFolderContent(view)?.appendChild(cameraFrameSlot);
@@ -307,6 +305,7 @@ export default function StudioExportPane({
       title: "Canvas Controls",
       expanded: false,
     });
+    createdBlades.push(controls);
     controls.addBinding(params, "orbitControl", {
       label: "Orbit",
       readonly: true,
@@ -349,9 +348,15 @@ export default function StudioExportPane({
       rootsRef.current = null;
       bindingsRef.current = null;
       paneRef.current = null;
-      pane.dispose();
+      createdBlades.forEach((blade) => {
+        try {
+          pane.remove(blade);
+        } catch {
+          // The shared root may already be disposed during page teardown.
+        }
+      });
     };
-  }, [resolutions]);
+  }, [pane, resolutions]);
 
   useEffect(() => {
     const params = paramsRef.current;
@@ -431,5 +436,5 @@ export default function StudioExportPane({
     );
   }, [bgMode, exporting, showCameraFrame]);
 
-  return <aside ref={containerRef} className="studio-export" />;
+  return null;
 }
