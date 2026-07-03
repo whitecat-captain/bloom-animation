@@ -21,16 +21,16 @@ type PetalFormKey =
 type PhyllotaxisKey = keyof FlowerDesignState["phyllotaxis"];
 type WindKey = keyof FlowerDesignState["wind"];
 type RenderStyleKey = keyof FlowerDesignState["renderStyle"];
-type AnimationKey = keyof FlowerDesignState["animation"];
 type StemKey = keyof FlowerDesignState["stem"];
 
 type DesignPaneParams = Pick<PetalShapeState, PetalFormKey> &
   FlowerDesignState["phyllotaxis"] &
   FlowerDesignState["wind"] &
-  FlowerDesignState["animation"] &
   FlowerDesignState["stem"] &
   FlowerDesignState["renderStyle"] & {
     preset: number;
+    duration: number;
+    previewTime: number;
   };
 
 type RefreshableBlade = BladeApi & {
@@ -49,18 +49,20 @@ type DesignPaneBindings = Record<
   | PhyllotaxisKey
   | WindKey
   | RenderStyleKey
-  | AnimationKey
   | StemKey
-  | "preset",
+  | "preset"
+  | "duration"
+  | "previewTime",
   RefreshableBlade
 > & {
-  playButton: ButtonApi;
+  playPreviewButton: ButtonApi;
   resetAllButton: ButtonApi;
 };
 
 type DesignPaneRoots = {
   outline: Root;
   preview: Root;
+  wind: Root;
 };
 
 type DesignPanePreset = {
@@ -75,16 +77,18 @@ type StudioDesignPaneProps = {
   selectedPreset: number;
   outlineEditor: ReactNode;
   petalPreview: ReactNode;
+  windPreview: ReactNode;
+  duration: number;
+  previewTime: number;
+  playing: boolean;
+  exporting: boolean;
   onPresetChange: (index: number) => void;
   onPetalFormChange: (key: PetalFormKey, value: number) => void;
   onPhyllotaxisChange: (key: PhyllotaxisKey, value: number) => void;
   onWindChange: (key: WindKey, value: number) => void;
   onRenderStyleChange: (key: RenderStyleKey, value: boolean) => void;
-  onAnimationChange: <K extends AnimationKey>(
-    key: K,
-    value: FlowerDesignState["animation"][K],
-  ) => void;
-  onPlayAnimation: () => void;
+  onDurationChange: (duration: number) => void;
+  onTogglePlay: () => void;
   onResetAll: () => void;
   onStemChange: <K extends StemKey>(
     key: K,
@@ -110,13 +114,18 @@ export default function StudioDesignPane({
   selectedPreset,
   outlineEditor,
   petalPreview,
+  windPreview,
+  duration,
+  previewTime,
+  playing,
+  exporting,
   onPresetChange,
   onPetalFormChange,
   onPhyllotaxisChange,
   onWindChange,
   onRenderStyleChange,
-  onAnimationChange,
-  onPlayAnimation,
+  onDurationChange,
+  onTogglePlay,
   onResetAll,
   onStemChange,
   onResetPetalGeometry,
@@ -130,14 +139,16 @@ export default function StudioDesignPane({
     onPhyllotaxisChange,
     onWindChange,
     onRenderStyleChange,
-    onAnimationChange,
-    onPlayAnimation,
+    onDurationChange,
+    onTogglePlay,
     onResetAll,
     onStemChange,
     onResetPetalGeometry,
   });
   const paramsRef = useRef<DesignPaneParams>({
     preset: selectedPreset,
+    duration,
+    previewTime,
     curlOpen: shape.curlOpen,
     curlBias: shape.curlBias,
     cup: shape.cup,
@@ -147,7 +158,6 @@ export default function StudioDesignPane({
     ...designState.phyllotaxis,
     ...designState.wind,
     ...designState.renderStyle,
-    ...designState.animation,
     ...designState.stem,
   });
 
@@ -158,22 +168,22 @@ export default function StudioDesignPane({
       onPhyllotaxisChange,
       onWindChange,
       onRenderStyleChange,
-      onAnimationChange,
-      onPlayAnimation,
+      onDurationChange,
+      onTogglePlay,
       onResetAll,
       onStemChange,
       onResetPetalGeometry,
     };
   }, [
-    onAnimationChange,
+    onDurationChange,
     onPetalFormChange,
     onPhyllotaxisChange,
-    onPlayAnimation,
     onPresetChange,
     onResetAll,
     onRenderStyleChange,
     onResetPetalGeometry,
     onStemChange,
+    onTogglePlay,
     onWindChange,
   ]);
 
@@ -242,10 +252,6 @@ export default function StudioDesignPane({
 
     const previewRoot = createRoot(previewSlot);
     const outlineRoot = createRoot(outlineSlot);
-    rootsRef.current = {
-      preview: previewRoot,
-      outline: outlineRoot,
-    };
 
     const bindNumber = <K extends keyof DesignPaneParams>(
       folder: FolderApi,
@@ -290,15 +296,17 @@ export default function StudioDesignPane({
     asym.on("change", (event) => {
       callbacksRef.current.onPetalFormChange("asym", event.value);
     });
-    const phyllotaxis = pane.addFolder({
-      title: "Phyllotaxis Layout",
+    // "Petal Arrangement" = phyllotaxis. Overall shape first (count, size,
+    // dome, inner/outer petals), fine-tuning curves last.
+    const arrangement = pane.addFolder({
+      title: "Petal Arrangement",
       expanded: false,
     });
-    createdBlades.push(phyllotaxis);
+    createdBlades.push(arrangement);
     const numPetals = bindNumber(
-      phyllotaxis,
+      arrangement,
       "numPetals",
-      "Petals Count",
+      "Petal Count",
       5,
       150,
       1,
@@ -307,51 +315,18 @@ export default function StudioDesignPane({
     numPetals.on("change", (event) => {
       callbacksRef.current.onPhyllotaxisChange("numPetals", event.value);
     });
-    const goldenAngle = bindNumber(
-      phyllotaxis,
-      "goldenAngle",
-      "Golden Angle",
-      90,
-      180,
-      0.1,
-    );
-    goldenAngle.on("change", (event) => {
-      callbacksRef.current.onPhyllotaxisChange("goldenAngle", event.value);
-    });
-    const radius = bindNumber(phyllotaxis, "radius", "Base Radius", 0.1, 1.5, 0.1);
+    const radius = bindNumber(arrangement, "radius", "Bloom Radius", 0.1, 1.5, 0.1);
     radius.on("change", (event) => {
       callbacksRef.current.onPhyllotaxisChange("radius", event.value);
     });
-    const radiusBias = bindNumber(
-      phyllotaxis,
-      "radiusBias",
-      "Radius Distribution",
-      0.3,
-      3,
-      0.1,
-    );
-    radiusBias.on("change", (event) => {
-      callbacksRef.current.onPhyllotaxisChange("radiusBias", event.value);
-    });
-    const height = bindNumber(phyllotaxis, "height", "Receptacle Height", 0, 1, 0.1);
+    const height = bindNumber(arrangement, "height", "Center Height", 0, 1, 0.1);
     height.on("change", (event) => {
       callbacksRef.current.onPhyllotaxisChange("height", event.value);
     });
-    const heightBias = bindNumber(
-      phyllotaxis,
-      "heightBias",
-      "Height Distribution",
-      0.3,
-      3,
-      0.1,
-    );
-    heightBias.on("change", (event) => {
-      callbacksRef.current.onPhyllotaxisChange("heightBias", event.value);
-    });
     const scaleInner = bindNumber(
-      phyllotaxis,
+      arrangement,
       "scaleInner",
-      "Inner Scale",
+      "Inner Petal Size",
       0.1,
       1,
       0.1,
@@ -360,9 +335,9 @@ export default function StudioDesignPane({
       callbacksRef.current.onPhyllotaxisChange("scaleInner", event.value);
     });
     const tiltInner = bindNumber(
-      phyllotaxis,
+      arrangement,
       "tiltInner",
-      "Inner Tilt",
+      "Inner Petal Tilt",
       -0.5,
       1.5,
       0.1,
@@ -371,9 +346,9 @@ export default function StudioDesignPane({
       callbacksRef.current.onPhyllotaxisChange("tiltInner", event.value);
     });
     const outAngle = bindNumber(
-      phyllotaxis,
+      arrangement,
       "outAngle",
-      "Outer Angle",
+      "Outer Petal Angle",
       0,
       120,
       0.1,
@@ -381,10 +356,43 @@ export default function StudioDesignPane({
     outAngle.on("change", (event) => {
       callbacksRef.current.onPhyllotaxisChange("outAngle", event.value);
     });
+    const goldenAngle = bindNumber(
+      arrangement,
+      "goldenAngle",
+      "Spiral Angle",
+      90,
+      180,
+      0.1,
+    );
+    goldenAngle.on("change", (event) => {
+      callbacksRef.current.onPhyllotaxisChange("goldenAngle", event.value);
+    });
+    const radiusBias = bindNumber(
+      arrangement,
+      "radiusBias",
+      "Radial Spread",
+      0.3,
+      3,
+      0.1,
+    );
+    radiusBias.on("change", (event) => {
+      callbacksRef.current.onPhyllotaxisChange("radiusBias", event.value);
+    });
+    const heightBias = bindNumber(
+      arrangement,
+      "heightBias",
+      "Height Taper",
+      0.3,
+      3,
+      0.1,
+    );
+    heightBias.on("change", (event) => {
+      callbacksRef.current.onPhyllotaxisChange("heightBias", event.value);
+    });
     const tiltBias = bindNumber(
-      phyllotaxis,
+      arrangement,
       "tiltBias",
-      "Tilt Distribution",
+      "Tilt Falloff",
       0.5,
       6,
       0.1,
@@ -393,28 +401,14 @@ export default function StudioDesignPane({
       callbacksRef.current.onPhyllotaxisChange("tiltBias", event.value);
     });
 
+    // Wind first (easiest to grasp, with a live demo up top), then the
+    // subtler randomness / surface-detail controls.
     const wind = pane.addFolder({
-      title: "Wind & Jitter",
+      title: "Wind & Movement",
       expanded: false,
     });
     createdBlades.push(wind);
-    const jitter = bindNumber(wind, "jitter", "Petal Jitter", 0, 0.4, 0.01, 2);
-    jitter.on("change", (event) => {
-      callbacksRef.current.onWindChange("jitter", event.value);
-    });
-    const shellGap = bindNumber(wind, "shellGap", "Shell Gap", 0, 0.5, 0.01, 2);
-    shellGap.on("change", (event) => {
-      callbacksRef.current.onWindChange("shellGap", event.value);
-    });
-    const noiseAmp = bindNumber(wind, "noiseAmp", "Surface Noise Amp", 0, 0.12, 0.01, 2);
-    noiseAmp.on("change", (event) => {
-      callbacksRef.current.onWindChange("noiseAmp", event.value);
-    });
-    const noiseFreq = bindNumber(wind, "noiseFreq", "Surface Noise Freq", 1, 15, 0.1);
-    noiseFreq.on("change", (event) => {
-      callbacksRef.current.onWindChange("noiseFreq", event.value);
-    });
-    const windAmp = bindNumber(wind, "windAmp", "Wind Amplitude", 0, 0.5, 0.01, 2);
+    const windAmp = bindNumber(wind, "windAmp", "Wind Strength", 0, 0.5, 0.01, 2);
     windAmp.on("change", (event) => {
       callbacksRef.current.onWindChange("windAmp", event.value);
     });
@@ -426,6 +420,28 @@ export default function StudioDesignPane({
     windHeading.on("change", (event) => {
       callbacksRef.current.onWindChange("windHeading", event.value);
     });
+    const jitter = bindNumber(wind, "jitter", "Petal Randomness", 0, 0.4, 0.01, 2);
+    jitter.on("change", (event) => {
+      callbacksRef.current.onWindChange("jitter", event.value);
+    });
+    const noiseAmp = bindNumber(wind, "noiseAmp", "Surface Ripple", 0, 0.12, 0.01, 2);
+    noiseAmp.on("change", (event) => {
+      callbacksRef.current.onWindChange("noiseAmp", event.value);
+    });
+    const noiseFreq = bindNumber(wind, "noiseFreq", "Ripple Detail", 1, 15, 0.1);
+    noiseFreq.on("change", (event) => {
+      callbacksRef.current.onWindChange("noiseFreq", event.value);
+    });
+    const shellGap = bindNumber(wind, "shellGap", "Closed Bud Gap", 0, 0.5, 0.01, 2);
+    shellGap.on("change", (event) => {
+      callbacksRef.current.onWindChange("shellGap", event.value);
+    });
+    // Foreign DOM must go in after every blade exists — tweakpane positions
+    // new blades by rack index, so an earlier insert would shuffle them.
+    const windSlot = document.createElement("div");
+    windSlot.className = "studio-design-preview-slot";
+    getFolderContent(wind)?.insertBefore(windSlot, windAmp.element);
+    const windRoot = createRoot(windSlot);
 
     const stem = pane.addFolder({
       title: "Stem & Leaves",
@@ -438,51 +454,45 @@ export default function StudioDesignPane({
     show.on("change", (event) => {
       callbacksRef.current.onStemChange("show", event.value);
     });
-    const length = bindNumber(stem, "length", "Stem Length", 0.8, 3, 0.1);
-    length.on("change", (event) => {
-      callbacksRef.current.onStemChange("length", event.value);
-    });
     const leaves = stem.addBinding(params, "leaves", {
       label: "Show Leaves",
     }) as ChangeableBlade<boolean>;
     leaves.on("change", (event) => {
       callbacksRef.current.onStemChange("leaves", event.value);
     });
+    const length = bindNumber(stem, "length", "Stem Length", 0.8, 3, 0.1);
+    length.on("change", (event) => {
+      callbacksRef.current.onStemChange("length", event.value);
+    });
 
-    const animation = pane.addFolder({
-      title: "Animation",
+    // Mirrors Export → Video Export's preview trio (duration / clock / play),
+    // minus resolution and the export button.
+    const animationPreview = pane.addFolder({
+      title: "Animation Preview",
       expanded: false,
     });
-    createdBlades.push(animation);
-    const bloom = bindNumber(animation, "bloom", "Bloom Progress", 0, 1, 0.01, 2);
-    bloom.on("change", (event) => {
-      callbacksRef.current.onAnimationChange("bloom", event.value);
+    createdBlades.push(animationPreview);
+    const durationBinding = animationPreview.addBinding(params, "duration", {
+      label: "Duration",
+      min: 2,
+      max: 10,
+      step: 1,
+      format: (value) => `${value.toFixed(0)}s`,
+    }) as ChangeableBlade<number>;
+    durationBinding.on("change", (event) => {
+      callbacksRef.current.onDurationChange(event.value);
     });
-    const bloomMax = bindNumber(animation, "bloomMax", "Bloom Limit", 0.5, 1, 0.01, 2);
-    bloomMax.on("change", (event) => {
-      callbacksRef.current.onAnimationChange("bloomMax", event.value);
+    const previewTimeBinding = animationPreview.addBinding(params, "previewTime", {
+      label: "Time",
+      readonly: true,
+      format: (value) => `${value.toFixed(1)}s`,
+    }) as RefreshableBlade;
+    const playPreviewButton = animationPreview.addButton({
+      title: "Play Preview",
     });
-    const transition = bindNumber(
-      animation,
-      "transition",
-      "Propagation Width",
-      0.05,
-      1,
-      0.01,
-      2,
-    );
-    transition.on("change", (event) => {
-      callbacksRef.current.onAnimationChange("transition", event.value);
-    });
-    const animate = animation.addBinding(params, "animate", {
-      label: "Auto-Animate",
-    }) as ChangeableBlade<boolean>;
-    animate.on("change", (event) => {
-      callbacksRef.current.onAnimationChange("animate", event.value);
-    });
-    const playButton = animation.addButton({ title: "Play" });
-    playButton.on("click", () => {
-      callbacksRef.current.onPlayAnimation();
+    playPreviewButton.element.classList.add("studio-export-preview-button");
+    playPreviewButton.on("click", () => {
+      callbacksRef.current.onTogglePlay();
     });
 
     const resetAllButton = pane.addButton({ title: "Reset All" });
@@ -492,6 +502,11 @@ export default function StudioDesignPane({
     });
 
     paneRef.current = pane;
+    rootsRef.current = {
+      preview: previewRoot,
+      outline: outlineRoot,
+      wind: windRoot,
+    };
     bindingsRef.current = {
       preset,
       flat,
@@ -521,11 +536,9 @@ export default function StudioDesignPane({
       show,
       length,
       leaves,
-      bloom,
-      bloomMax,
-      transition,
-      animate,
-      playButton,
+      duration: durationBinding,
+      previewTime: previewTimeBinding,
+      playPreviewButton,
       resetAllButton,
     };
 
@@ -535,6 +548,7 @@ export default function StudioDesignPane({
         window.setTimeout(() => {
           roots.preview.unmount();
           roots.outline.unmount();
+          roots.wind.unmount();
         }, 0);
       }
       rootsRef.current = null;
@@ -556,8 +570,14 @@ export default function StudioDesignPane({
   }, [outlineEditor, petalPreview]);
 
   useEffect(() => {
+    rootsRef.current?.wind.render(windPreview);
+  }, [windPreview]);
+
+  useEffect(() => {
     const params = paramsRef.current;
     params.preset = selectedPreset;
+    params.duration = duration;
+    params.previewTime = previewTime;
     params.curlOpen = shape.curlOpen;
     params.curlBias = shape.curlBias;
     params.cup = shape.cup;
@@ -567,7 +587,6 @@ export default function StudioDesignPane({
     Object.assign(params, designState.phyllotaxis);
     Object.assign(params, designState.wind);
     Object.assign(params, designState.renderStyle);
-    Object.assign(params, designState.animation);
     Object.assign(params, designState.stem);
 
     const bindings = bindingsRef.current;
@@ -576,13 +595,16 @@ export default function StudioDesignPane({
     Object.values(bindings).forEach((binding) => {
       if ("refresh" in binding) binding.refresh();
     });
-  }, [designState, selectedPreset, shape]);
+
+    bindings.duration.disabled = exporting;
+    bindings.playPreviewButton.disabled = exporting;
+    bindings.playPreviewButton.title = playing ? "Exit Preview" : "Play Preview";
+  }, [designState, duration, exporting, playing, previewTime, selectedPreset, shape]);
 
   return null;
 }
 
 export type {
-  AnimationKey,
   PetalFormKey,
   PhyllotaxisKey,
   WindKey,

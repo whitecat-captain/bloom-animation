@@ -18,7 +18,6 @@ import {
 import PetalOutlineEditor from "./PetalOutlineEditor";
 import PetalShapePreview from "./PetalShapePreview";
 import StudioDesignPane, {
-  type AnimationKey,
   type PetalFormKey,
   type PhyllotaxisKey,
   type RenderStyleKey,
@@ -26,6 +25,7 @@ import StudioDesignPane, {
   type WindKey,
 } from "./StudioDesignPane";
 import StudioExportPane from "./StudioExportPane";
+import WindPreview from "./WindPreview";
 
 type BgMode = "transparent" | "solid";
 
@@ -337,13 +337,6 @@ export default function StudioCanvas() {
     sceneRef.current?.setRenderStyle(key, value);
   };
 
-  const handleAnimationChange = <K extends AnimationKey>(
-    key: K,
-    value: FlowerDesignState["animation"][K],
-  ) => {
-    sceneRef.current?.setAnimation(key, value);
-  };
-
   const handleStemChange = <K extends StemKey>(
     key: K,
     value: FlowerDesignState["stem"][K],
@@ -477,13 +470,18 @@ export default function StudioCanvas() {
                   resetViewKey={petalPreviewResetKey}
                 />
               }
+              windPreview={<WindPreview wind={designState.wind} />}
+              duration={duration}
+              previewTime={previewTime}
+              playing={playing}
+              exporting={exporting}
               onPresetChange={handlePresetChange}
               onPetalFormChange={handlePetalFormChange}
               onPhyllotaxisChange={handlePhyllotaxisChange}
               onWindChange={handleWindChange}
               onRenderStyleChange={handleRenderStyleChange}
-              onAnimationChange={handleAnimationChange}
-              onPlayAnimation={() => sceneRef.current?.playBloom()}
+              onDurationChange={handleDurationChange}
+              onTogglePlay={togglePlay}
               onResetAll={() => sceneRef.current?.resetAll()}
               onStemChange={handleStemChange}
               onResetPetalGeometry={handleResetPetalGeometry}
