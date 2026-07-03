@@ -31,6 +31,7 @@
 }
 
 .studio .gui-container {
+  display: none;
   background: #111827;
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 18px 54px rgba(0, 0, 0, 0.34);
