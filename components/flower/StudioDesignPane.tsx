@@ -97,6 +97,9 @@ type StudioDesignPaneProps = {
     value: FlowerDesignState["stem"][K],
   ) => void;
   onResetPetalGeometry: () => void;
+  onResetArrangement: () => void;
+  onResetWind: () => void;
+  onResetNaturalDetail: () => void;
 };
 
 function optionMap<T extends string | number>(
@@ -107,6 +110,27 @@ function optionMap<T extends string | number>(
     return options;
   }, {});
 }
+
+const noop = () => {};
+// Swapped in while the refresh loop runs: tweakpane fires change events
+// synchronously from refresh() when a value moved, and letting those echo
+// into the scene would re-apply stale values (e.g. revert a rebuild that is
+// still queued behind requestAnimationFrame).
+const SYNC_GUARD_CALLBACKS = {
+  onPresetChange: noop,
+  onPetalFormChange: noop,
+  onPhyllotaxisChange: noop,
+  onWindChange: noop,
+  onRenderStyleChange: noop,
+  onDurationChange: noop,
+  onTogglePlay: noop,
+  onResetAll: noop,
+  onStemChange: noop,
+  onResetPetalGeometry: noop,
+  onResetArrangement: noop,
+  onResetWind: noop,
+  onResetNaturalDetail: noop,
+};
 
 export default function StudioDesignPane({
   pane,
@@ -132,6 +156,9 @@ export default function StudioDesignPane({
   onResetAll,
   onStemChange,
   onResetPetalGeometry,
+  onResetArrangement,
+  onResetWind,
+  onResetNaturalDetail,
 }: StudioDesignPaneProps) {
   const paneRef = useRef<TabPageApi | null>(null);
   const bindingsRef = useRef<DesignPaneBindings | null>(null);
@@ -147,6 +174,9 @@ export default function StudioDesignPane({
     onResetAll,
     onStemChange,
     onResetPetalGeometry,
+    onResetArrangement,
+    onResetWind,
+    onResetNaturalDetail,
   });
   const paramsRef = useRef<DesignPaneParams>({
     preset: selectedPreset,
@@ -176,6 +206,9 @@ export default function StudioDesignPane({
       onResetAll,
       onStemChange,
       onResetPetalGeometry,
+      onResetArrangement,
+      onResetWind,
+      onResetNaturalDetail,
     };
   }, [
     onDurationChange,
@@ -184,7 +217,10 @@ export default function StudioDesignPane({
     onPresetChange,
     onResetAll,
     onRenderStyleChange,
+    onResetArrangement,
+    onResetNaturalDetail,
     onResetPetalGeometry,
+    onResetWind,
     onStemChange,
     onTogglePlay,
     onWindChange,
@@ -223,16 +259,6 @@ export default function StudioDesignPane({
     createdBlades.push(petalGeometry);
     const previewSlot = document.createElement("div");
     previewSlot.className = "studio-design-preview-slot";
-    const previewResetSlot = document.createElement("div");
-    previewResetSlot.className = "studio-design-preview-reset-slot";
-    const previewResetButton = document.createElement("button");
-    previewResetButton.type = "button";
-    previewResetButton.className = "studio-design-preview-reset-button";
-    previewResetButton.textContent = "Reset Petal Geometry";
-    previewResetButton.addEventListener("click", () => {
-      callbacksRef.current.onResetPetalGeometry();
-    });
-    previewResetSlot.appendChild(previewResetButton);
     const outlineSlot = document.createElement("div");
     outlineSlot.className = "studio-design-outline-slot";
     const outline = petalGeometry.addFolder({
@@ -243,14 +269,17 @@ export default function StudioDesignPane({
       title: "3D Form",
       expanded: true,
     });
+    const resetPetalGeometryButton = petalGeometry.addButton({
+      title: "Reset Geometry",
+    });
+    resetPetalGeometryButton.element.classList.add("studio-soft-reset-button");
+    resetPetalGeometryButton.on("click", () => {
+      callbacksRef.current.onResetPetalGeometry();
+    });
 
     const getFolderContent = (folder: FolderApi) =>
       folder.element.querySelector(":scope > .tp-fldv_c");
     getFolderContent(petalGeometry)?.insertBefore(previewSlot, outline.element);
-    getFolderContent(petalGeometry)?.insertBefore(
-      previewResetSlot,
-      outline.element,
-    );
     getFolderContent(outline)?.appendChild(outlineSlot);
 
     const previewRoot = createRoot(previewSlot);
@@ -403,6 +432,13 @@ export default function StudioDesignPane({
     tiltBias.on("change", (event) => {
       callbacksRef.current.onPhyllotaxisChange("tiltBias", event.value);
     });
+    const resetArrangementButton = arrangement.addButton({
+      title: "Reset Arrangement",
+    });
+    resetArrangementButton.element.classList.add("studio-soft-reset-button");
+    resetArrangementButton.on("click", () => {
+      callbacksRef.current.onResetArrangement();
+    });
     // Foreign DOM must go in after every blade exists — tweakpane positions
     // new blades by rack index, so an earlier insert would shuffle them.
     const arrangementSlot = document.createElement("div");
@@ -431,6 +467,11 @@ export default function StudioDesignPane({
     windHeading.on("change", (event) => {
       callbacksRef.current.onWindChange("windHeading", event.value);
     });
+    const resetWindButton = wind.addButton({ title: "Reset Wind" });
+    resetWindButton.element.classList.add("studio-soft-reset-button");
+    resetWindButton.on("click", () => {
+      callbacksRef.current.onResetWind();
+    });
     const windSlot = document.createElement("div");
     windSlot.className = "studio-design-preview-slot";
     getFolderContent(wind)?.insertBefore(windSlot, windAmp.element);
@@ -458,6 +499,11 @@ export default function StudioDesignPane({
     const shellGap = bindNumber(detail, "shellGap", "Closed Bud Gap", 0, 0.5, 0.01, 2);
     shellGap.on("change", (event) => {
       callbacksRef.current.onWindChange("shellGap", event.value);
+    });
+    const resetDetailButton = detail.addButton({ title: "Reset Detail" });
+    resetDetailButton.element.classList.add("studio-soft-reset-button");
+    resetDetailButton.on("click", () => {
+      callbacksRef.current.onResetNaturalDetail();
     });
 
     const stem = pane.addFolder({
@@ -619,11 +665,18 @@ export default function StudioDesignPane({
 
     // Refresh only the bindings whose value actually changed — a full-pane
     // refresh here would touch ~30 DOM inputs 10x/s during preview playback.
-    for (const key of Object.keys(next) as Array<keyof DesignPaneParams>) {
-      if (Object.is(params[key], next[key])) continue;
-      params[key] = next[key] as never;
-      const binding = bindings?.[key];
-      if (binding && "refresh" in binding) binding.refresh();
+    // Callbacks are muted for the duration: refresh() emits change events.
+    const activeCallbacks = callbacksRef.current;
+    callbacksRef.current = SYNC_GUARD_CALLBACKS;
+    try {
+      for (const key of Object.keys(next) as Array<keyof DesignPaneParams>) {
+        if (Object.is(params[key], next[key])) continue;
+        params[key] = next[key] as never;
+        const binding = bindings?.[key];
+        if (binding && "refresh" in binding) binding.refresh();
+      }
+    } finally {
+      callbacksRef.current = activeCallbacks;
     }
 
     if (!bindings) return;

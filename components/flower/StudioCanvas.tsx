@@ -460,6 +460,33 @@ export default function StudioCanvas() {
     setPetalPreviewResetKey((key) => key + 1);
   }
 
+  function handleResetArrangement() {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    const defaults = DEFAULT_DESIGN_STATE.phyllotaxis;
+    (Object.keys(defaults) as PhyllotaxisKey[]).forEach((key) => {
+      scene.setPhyllotaxis(key, defaults[key]);
+    });
+  }
+
+  function handleResetWind() {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    const defaults = DEFAULT_DESIGN_STATE.wind;
+    (["windAmp", "windSpeed", "windHeading"] as const).forEach((key) => {
+      scene.setWind(key, defaults[key]);
+    });
+  }
+
+  function handleResetNaturalDetail() {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    const defaults = DEFAULT_DESIGN_STATE.wind;
+    (["jitter", "noiseAmp", "noiseFreq", "shellGap"] as const).forEach((key) => {
+      scene.setWind(key, defaults[key]);
+    });
+  }
+
   function handleDurationChange(nextDuration: number) {
     setDuration(nextDuration);
   }
@@ -588,6 +615,9 @@ export default function StudioCanvas() {
               onResetAll={() => sceneRef.current?.resetAll()}
               onStemChange={handleStemChange}
               onResetPetalGeometry={handleResetPetalGeometry}
+              onResetArrangement={handleResetArrangement}
+              onResetWind={handleResetWind}
+              onResetNaturalDetail={handleResetNaturalDetail}
             />
             <StudioExportPane
               pane={sheetPages.export}

@@ -112,6 +112,21 @@ function optionMap<T extends string | number>(
   }, {});
 }
 
+const noop = () => {};
+// Swapped in while the refresh loop runs — refresh() emits change events
+// synchronously, and those echoes must not feed back into the app state.
+const SYNC_GUARD_CALLBACKS = {
+  onBgModeChange: noop,
+  onColorChange: noop,
+  onImageResChange: noop,
+  onVideoResChange: noop,
+  onDurationChange: noop,
+  onShowCameraFrameChange: noop,
+  onTogglePlay: noop,
+  onExportImage: noop,
+  onExportVideo: noop,
+};
+
 export default function StudioExportPane({
   pane,
   resolutions,
@@ -380,12 +395,18 @@ export default function StudioExportPane({
       params[key] = value as never;
       bindings[key].refresh();
     };
-    sync("color", color);
-    sync("imageRes", imageRes);
-    sync("videoRes", videoRes);
-    sync("duration", duration);
-    sync("previewTime", previewTime);
-    sync("progress", Math.round(progress * 100));
+    const activeCallbacks = callbacksRef.current;
+    callbacksRef.current = SYNC_GUARD_CALLBACKS;
+    try {
+      sync("color", color);
+      sync("imageRes", imageRes);
+      sync("videoRes", videoRes);
+      sync("duration", duration);
+      sync("previewTime", previewTime);
+      sync("progress", Math.round(progress * 100));
+    } finally {
+      callbacksRef.current = activeCallbacks;
+    }
 
     const setHidden = (blade: RefreshableBlade, hidden: boolean) => {
       if (blade.hidden !== hidden) blade.hidden = hidden;
