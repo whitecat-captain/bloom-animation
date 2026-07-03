@@ -267,7 +267,7 @@ export default function StudioCanvas() {
       expanded: true,
     });
     const tab = pane.addTab({
-      pages: [{ title: "Design" }, { title: "Export" }],
+      pages: [{ title: "DESIGN" }, { title: "EXPORT" }],
     });
 
     setSheetPages({
