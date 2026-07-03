@@ -561,6 +561,7 @@ export default function StudioDesignPane({
       format: (value) => `${value.toFixed(1)}s`,
     }) as RefreshableBlade;
     const playPreviewButton = animationPreview.addButton({
+      title: "Play",
     });
     playPreviewButton.element.classList.add("studio-export-preview-button");
     playPreviewButton.on("click", () => {
@@ -688,6 +689,7 @@ export default function StudioDesignPane({
     }
 
     if (!bindings) return;
+    const playTitle = playing ? "Exit Preview" : "Play";
     if (bindings.playPreviewButton.title !== playTitle) {
       bindings.playPreviewButton.title = playTitle;
     }

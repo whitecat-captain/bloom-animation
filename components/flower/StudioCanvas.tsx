@@ -243,6 +243,7 @@ export default function StudioCanvas() {
       null,
       null,
       {
+        flowerGroupY: 0.78,
         onPetalShapeChange: setPetalShape,
         onDesignStateChange: setDesignState,
       },
