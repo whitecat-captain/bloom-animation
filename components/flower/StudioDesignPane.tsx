@@ -132,6 +132,14 @@ const SYNC_GUARD_CALLBACKS = {
   onResetNaturalDetail: noop,
 };
 
+function setPreviewExitState(button: ButtonApi, active: boolean) {
+  button.element.classList.toggle("is-preview-exit", active);
+  const tip = active ? "Preview is playing. Click to exit preview." : "";
+  if (button.element.title !== tip) button.element.title = tip;
+  const action = button.element.querySelector<HTMLButtonElement>(".tp-btnv_b");
+  if (action && action.title !== tip) action.title = tip;
+}
+
 export default function StudioDesignPane({
   pane,
   shape,
@@ -684,6 +692,7 @@ export default function StudioDesignPane({
     if (bindings.playPreviewButton.title !== playTitle) {
       bindings.playPreviewButton.title = playTitle;
     }
+    setPreviewExitState(bindings.playPreviewButton, playing);
     if (bindings.duration.disabled !== exporting) {
       bindings.duration.disabled = exporting;
     }

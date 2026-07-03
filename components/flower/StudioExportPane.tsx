@@ -127,6 +127,14 @@ const SYNC_GUARD_CALLBACKS = {
   onExportVideo: noop,
 };
 
+function setPreviewExitState(button: ButtonApi, active: boolean) {
+  button.element.classList.toggle("is-preview-exit", active);
+  const tip = active ? "Preview is playing. Click to exit preview." : "";
+  if (button.element.title !== tip) button.element.title = tip;
+  const action = button.element.querySelector<HTMLButtonElement>(".tp-btnv_b");
+  if (action && action.title !== tip) action.title = tip;
+}
+
 export default function StudioExportPane({
   pane,
   resolutions,
@@ -437,6 +445,7 @@ export default function StudioExportPane({
       exportKind === "image" ? "Exporting..." : "Export Image",
     );
     setTitle(bindings.playButton, playing ? "Exit Preview" : "Play Preview");
+    setPreviewExitState(bindings.playButton, playing);
     setTitle(
       bindings.videoButton,
       exportKind === "video"
