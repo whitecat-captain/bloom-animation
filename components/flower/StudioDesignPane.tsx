@@ -57,6 +57,7 @@ type DesignPaneBindings = Record<
 > & {
   playPreviewButton: ButtonApi;
   resetAllButton: ButtonApi;
+  colors: RefreshableBlade[];
 };
 
 type DesignPaneRoots = {
@@ -70,12 +71,29 @@ type DesignPanePreset = {
   name: string;
 };
 
+// The petal ramp runs rim -> core; one editable stop per shader colour.
+const COLOR_STOP_LABELS = ["Tip", "Outer", "Mid", "Inner", "Core"];
+
+function rgbToHex([r, g, b]: [number, number, number]) {
+  const channel = (c: number) =>
+    Math.round(Math.min(Math.max(c, 0), 1) * 255)
+      .toString(16)
+      .padStart(2, "0");
+  return `#${channel(r)}${channel(g)}${channel(b)}`;
+}
+
+function hexToRgb(hex: string): [number, number, number] {
+  const n = parseInt(hex.slice(1), 16);
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+}
+
 type StudioDesignPaneProps = {
   pane: TabPageApi;
   shape: PetalShapeState;
   designState: FlowerDesignState;
   presets: DesignPanePreset[];
   selectedPreset: number;
+  palette: [number, number, number][];
   outlineEditor: ReactNode;
   petalPreview: ReactNode;
   arrangementPreview: ReactNode;
@@ -85,6 +103,7 @@ type StudioDesignPaneProps = {
   playing: boolean;
   exporting: boolean;
   onPresetChange: (index: number) => void;
+  onPaletteChange: (index: number, rgb: [number, number, number]) => void;
   onPetalFormChange: (key: PetalFormKey, value: number) => void;
   onPhyllotaxisChange: (key: PhyllotaxisKey, value: number) => void;
   onWindChange: (key: WindKey, value: number) => void;
@@ -118,6 +137,7 @@ const noop = () => {};
 // still queued behind requestAnimationFrame).
 const SYNC_GUARD_CALLBACKS = {
   onPresetChange: noop,
+  onPaletteChange: noop,
   onPetalFormChange: noop,
   onPhyllotaxisChange: noop,
   onWindChange: noop,
@@ -146,6 +166,7 @@ export default function StudioDesignPane({
   designState,
   presets,
   selectedPreset,
+  palette,
   outlineEditor,
   petalPreview,
   arrangementPreview,
@@ -155,6 +176,7 @@ export default function StudioDesignPane({
   playing,
   exporting,
   onPresetChange,
+  onPaletteChange,
   onPetalFormChange,
   onPhyllotaxisChange,
   onWindChange,
@@ -173,6 +195,7 @@ export default function StudioDesignPane({
   const rootsRef = useRef<DesignPaneRoots | null>(null);
   const callbacksRef = useRef({
     onPresetChange,
+    onPaletteChange,
     onPetalFormChange,
     onPhyllotaxisChange,
     onWindChange,
@@ -201,10 +224,16 @@ export default function StudioDesignPane({
     ...designState.renderStyle,
     ...designState.stem,
   });
+  // Hex mirror of the palette prop for the tweakpane colour swatches. Its own
+  // object (not DesignPaneParams): the stop count comes from the data.
+  const colorParamsRef = useRef<Record<string, string>>(
+    Object.fromEntries(palette.map((stop, i) => [`c${i}`, rgbToHex(stop)])),
+  );
 
   useEffect(() => {
     callbacksRef.current = {
       onPresetChange,
+      onPaletteChange,
       onPetalFormChange,
       onPhyllotaxisChange,
       onWindChange,
@@ -220,6 +249,7 @@ export default function StudioDesignPane({
     };
   }, [
     onDurationChange,
+    onPaletteChange,
     onPetalFormChange,
     onPhyllotaxisChange,
     onPresetChange,
@@ -238,21 +268,52 @@ export default function StudioDesignPane({
     const params = paramsRef.current;
     const createdBlades: BladeApi[] = [];
 
-    const renderStyle = pane.addFolder({
-      title: "Render Style",
-      expanded: false,
-    });
-    createdBlades.push(renderStyle);
-    const preset = renderStyle.addBinding(params, "preset", {
-      label: "Preset",
+    // Whole-flower preset picker sits at the very top: it swaps geometry AND
+    // palette in one go, so it must not read as a colour-only option.
+    const preset = pane.addBinding(params, "preset", {
+      label: "Flower",
       options: optionMap(presets.map((presetItem, index) => ({
         label: presetItem.name,
         value: index,
       }))),
     }) as ChangeableBlade<number>;
+    createdBlades.push(preset);
     preset.on("change", (event) => {
       callbacksRef.current.onPresetChange(event.value);
     });
+
+    // Directly under the flower picker: restore every design value to the
+    // ACTIVE flower's params (shape, arrangement, wind, natural detail).
+    const resetAllButton = pane.addButton({ title: "Reset All" });
+    resetAllButton.element.classList.add("studio-soft-reset-button");
+    createdBlades.push(resetAllButton);
+    resetAllButton.on("click", () => {
+      callbacksRef.current.onResetAll();
+    });
+
+    // One editable swatch per palette stop (rim -> core). Decoupled from the
+    // preset: picking a preset seeds these, editing them recolours live.
+    const colorsFolder = pane.addFolder({
+      title: "Colors",
+      expanded: false,
+    });
+    createdBlades.push(colorsFolder);
+    const colorParams = colorParamsRef.current;
+    const colorBindings = Object.keys(colorParams).map((key, index) => {
+      const binding = colorsFolder.addBinding(colorParams, key, {
+        label: COLOR_STOP_LABELS[index] ?? `Color ${index + 1}`,
+      }) as ChangeableBlade<string>;
+      binding.on("change", (event) => {
+        callbacksRef.current.onPaletteChange(index, hexToRgb(event.value));
+      });
+      return binding;
+    });
+
+    const renderStyle = pane.addFolder({
+      title: "Render Style",
+      expanded: false,
+    });
+    createdBlades.push(renderStyle);
     const flat = renderStyle.addBinding(params, "flat", {
       label: "Flat Shading",
     }) as ChangeableBlade<boolean>;
@@ -385,12 +446,14 @@ export default function StudioDesignPane({
     tiltInner.on("change", (event) => {
       callbacksRef.current.onPhyllotaxisChange("tiltInner", event.value);
     });
+    // Max sits past horizontal (90°) so recurved looks — e.g. the dahlia's
+    // drooping outer rings — are reachable and display without clamping.
     const outAngle = bindNumber(
       arrangement,
       "outAngle",
       "Outer Petal Angle",
       0,
-      120,
+      130,
       0.1,
     );
     outAngle.on("change", (event) => {
@@ -571,13 +634,6 @@ export default function StudioDesignPane({
       callbacksRef.current.onTogglePlay();
     });
 
-    const resetAllButton = pane.addButton({ title: "Reset All" });
-    resetAllButton.hidden = true;
-    createdBlades.push(resetAllButton);
-    resetAllButton.on("click", () => {
-      callbacksRef.current.onResetAll();
-    });
-
     paneRef.current = pane;
     rootsRef.current = {
       preview: previewRoot,
@@ -587,6 +643,7 @@ export default function StudioDesignPane({
     };
     bindingsRef.current = {
       preset,
+      colors: colorBindings,
       flat,
       curlOpen,
       curlBias,
@@ -687,6 +744,17 @@ export default function StudioDesignPane({
         const binding = bindings?.[key];
         if (binding && "refresh" in binding) binding.refresh();
       }
+      // Palette stops live in their own hex mirror; the user-edit round-trip
+      // (hex -> rgb -> hex) is exact, so equality means "no refresh needed".
+      const colorParams = colorParamsRef.current;
+      palette.forEach((stop, index) => {
+        const key = `c${index}`;
+        if (!(key in colorParams)) return;
+        const hex = rgbToHex(stop);
+        if (colorParams[key] === hex) return;
+        colorParams[key] = hex;
+        bindings?.colors[index]?.refresh();
+      });
     } finally {
       callbacksRef.current = activeCallbacks;
     }
@@ -703,7 +771,7 @@ export default function StudioDesignPane({
     if (bindings.playPreviewButton.disabled !== exporting) {
       bindings.playPreviewButton.disabled = exporting;
     }
-  }, [designState, duration, exporting, playing, previewTime, selectedPreset, shape]);
+  }, [designState, duration, exporting, palette, playing, previewTime, selectedPreset, shape]);
 
   return null;
 }

@@ -96,48 +96,124 @@ const DEFAULT_DESIGN_STATE: FlowerDesignState = {
   },
 };
 
-// Palette-only starter looks (5 stops, cold rim -> hot core), applied instantly
-// via scene.setPalette without rebuilding the mesh.
-const PRESETS: { name: string; stops: [number, number, number][] }[] = [
+// Whole-flower presets: geometry patch + 5-stop palette (cold rim -> hot
+// core). Selecting one re-shapes the mesh via scene.applyPreset AND recolours
+// via scene.setPalette; the palette stays independently editable afterwards.
+type FlowerPresetParams = Parameters<FlowerSceneApi["applyPreset"]>[0];
+type FlowerPreset = {
+  name: string;
+  palette: [number, number, number][];
+  params: FlowerPresetParams;
+};
+
+// "Aurora Rose" is the studio's boot look — these params mirror the scene
+// defaults in flowerScene.ts so preset 0 always round-trips to the same flower.
+const AURORA_ROSE_PARAMS: FlowerPresetParams = {
+  numPetals: 36,
+  goldenAngle: 137.5,
+  outwardPush: true,
+  radius: 0.165,
+  radiusBias: 1.15,
+  height: 0.155,
+  heightBias: 1.2,
+  scaleInner: 0.46,
+  tiltInner: 0.08,
+  outAngle: 68,
+  tiltBias: 2.2,
+  petalLen: 0.95,
+  curlClosed: 1.7,
+  curlOpen: -0.35,
+  curlBias: 2.3,
+  propagation: 1.2,
+  w0: 0.16,
+  w1: 0.28,
+  w2: 0.3,
+  w3: 0.2,
+  cup: 0.4,
+  sideCurl: 0.45,
+  wrapWidth: 0.35,
+  wrapCup: 0.5,
+  waveAmp: 0.035,
+  asym: 0.08,
+  jitter: 0.04,
+  noiseAmp: 0.045,
+  noiseFreq: 5,
+  shellGap: 0.18,
+  windAmp: 0.15,
+  windSpeed: 1.5,
+  windHeading: 35,
+  flat: true,
+};
+
+// Open decorative dahlia, read off a real bloom (an "Arabian Night" style
+// red): a wide, fairly FLAT rosette of slender boat-folded petals in regular
+// rings — tiny furled florets at the centre, each ring longer and more open,
+// and the outermost rings tipping past horizontal so they drape down and out
+// around the stem like a skirt.
+const CRIMSON_DAHLIA_PARAMS: FlowerPresetParams = {
+  numPetals: 132, // dense — neighbouring petals overlap like the photo
+  goldenAngle: 137.5,
+  outwardPush: true,
+  radius: 0.22, // wide rosette, not a tight ball
+  radiusBias: 1.05, // near-linear ring spacing keeps the layers legible
+  height: 0.4, // tall domed receptacle so the outer rings fall away below it
+  heightBias: 1.1,
+  scaleInner: 0.3, // centre florets stay tiny against the long outer petals
+  tiltInner: 0.5, // inner florets stand up out of the throat
+  outAngle: 122, // rim tips past horizontal -> the drooping skirt
+  tiltBias: 1.75, // mid rings open up too — only the very centre stays furled
+  petalLen: 0.95, // long, slender petals
+  curlClosed: 1.85,
+  curlOpen: -0.12, // gentle backward arch so the skirt drapes, not spikes
+  curlBias: 2.0,
+  propagation: 1.2,
+  // Lance profile: narrow base, widest ~40% up, easing to a ROUNDED point —
+  // a generous tip width keeps the rings reading as a ruffle, not star spikes.
+  w0: 0.11,
+  w1: 0.28,
+  w2: 0.28,
+  w3: 0.16,
+  cup: 0.6, // boat/trough fold along the midrib
+  sideCurl: 0.5,
+  wrapWidth: 0.12,
+  wrapCup: 0.2,
+  waveAmp: 0.015, // dahlia petals are neat — barely any edge wave
+  asym: 0.04,
+  jitter: 0.03, // regular, ring-like placement
+  noiseAmp: 0.03,
+  noiseFreq: 5,
+  shellGap: 0.08,
+  windAmp: 0.12,
+  windSpeed: 1.5,
+  windHeading: 35,
+  flat: false,
+};
+
+const FLOWER_PRESETS: FlowerPreset[] = [
   {
-    name: "Aurora",
-    stops: [
+    name: "Aurora Rose",
+    palette: [
       [0.05, 0.2, 0.65],
       [0.15, 0.55, 0.95],
       [0.85, 0.92, 1.0],
       [1.0, 0.72, 0.0],
       [1.0, 0.25, 0.0],
     ],
+    params: AURORA_ROSE_PARAMS,
   },
   {
-    name: "Scarlet",
-    stops: [
-      [0.35, 0.0, 0.05],
-      [0.85, 0.1, 0.12],
-      [1.0, 0.85, 0.8],
-      [1.0, 0.4, 0.1],
-      [0.7, 0.0, 0.05],
+    name: "Crimson Dahlia",
+    // Cool velvet crimson, read off the reference photo: rosy light kissing
+    // the outer petal tips, rich blue-leaning crimson faces (never orange),
+    // sinking to a dark burgundy at the furled centre.
+    palette: [
+      [1.0, 0.42, 0.48],
+      [0.87, 0.1, 0.2],
+      [0.7, 0.04, 0.14],
+      [0.45, 0.02, 0.1],
+      [0.24, 0.01, 0.07],
     ],
-  },
-  {
-    name: "Sunset",
-    stops: [
-      [0.4, 0.05, 0.35],
-      [0.95, 0.35, 0.2],
-      [1.0, 0.9, 0.6],
-      [1.0, 0.55, 0.1],
-      [0.85, 0.15, 0.25],
-    ],
-  },
-  {
-    name: "Moonlight",
-    stops: [
-      [0.1, 0.15, 0.35],
-      [0.3, 0.45, 0.7],
-      [0.95, 0.97, 1.0],
-      [0.7, 0.85, 1.0],
-      [0.4, 0.55, 0.9],
-    ],
+    params: CRIMSON_DAHLIA_PARAMS,
   },
 ];
 
@@ -152,8 +228,13 @@ export default function StudioCanvas() {
 
   const [bgMode, setBgMode] = useState<BgMode>("solid");
   const [color, setColor] = useState("#0b1020");
-  // Aurora (index 0) is the scene's default palette, so it starts selected.
+  // Aurora Rose (index 0) mirrors the scene's boot defaults, so it starts
+  // selected. The palette is deliberately its own state, decoupled from the
+  // preset: picking a preset seeds it, then each stop is editable on its own.
   const [selectedPreset, setSelectedPreset] = useState(0);
+  const [palette, setPalette] = useState<[number, number, number][]>(
+    FLOWER_PRESETS[0].palette,
+  );
   const [duration, setDuration] = useState(5);
   const [imageRes, setImageRes] = useState(DEFAULT_RES);
   const [videoRes, setVideoRes] = useState(DEFAULT_RES);
@@ -253,6 +334,9 @@ export default function StudioCanvas() {
     );
     sceneRef.current = scene;
     scene.setBloom(scene.bloomMax);
+    // Boot look is preset 0 (Aurora Rose), which mirrors the scene defaults, so
+    // resets start out pointing at it too.
+    scene.setResetBaseline(FLOWER_PRESETS[0].params);
 
     const zoomWithAltScroll = (event: WheelEvent) => {
       if (!event.altKey) return;
@@ -476,9 +560,33 @@ export default function StudioCanvas() {
     });
   }
 
+  // A preset is a whole flower: geometry patch + palette seed. The scene
+  // notifies the shape/design state back, which refreshes every pane binding.
   function handlePresetChange(index: number) {
+    const preset = FLOWER_PRESETS[index];
+    if (!preset) return;
     setSelectedPreset(index);
-    sceneRef.current?.setPalette(PRESETS[index].stops);
+    setPalette(preset.palette);
+    const scene = sceneRef.current;
+    if (!scene) return;
+    scene.applyPreset(preset.params);
+    scene.setPalette(preset.palette);
+    // Every reset (all / geometry / arrangement / wind / detail) now returns to
+    // THIS flower's params, not the boot rose.
+    scene.setResetBaseline(preset.params);
+    // Re-assert the fully-open pose so the new flower shows bloomed, not
+    // mid-wavefront (curl params shift what the current bloom value means).
+    scene.setBloom(scene.bloomMax);
+  }
+
+  function handlePaletteChange(index: number, rgb: [number, number, number]) {
+    setPalette((stops) => {
+      const next = stops.map((stop, i) =>
+        i === index ? rgb : stop,
+      ) as [number, number, number][];
+      sceneRef.current?.setPalette(next);
+      return next;
+    });
   }
 
   function handleResetPetalGeometry() {
@@ -506,7 +614,6 @@ export default function StudioCanvas() {
 
   // Memoised embedded-React nodes: the sheet re-renders 10x/s during preview
   // playback, and a fresh element would re-render each pane-hosted root.
-  const palette = PRESETS[selectedPreset].stops;
   const outlineEditor = useMemo(
     () => (
       <PetalOutlineEditor
@@ -631,8 +738,9 @@ export default function StudioCanvas() {
               pane={sheetPages.design}
               shape={petalShape}
               designState={designState}
-              presets={PRESETS}
+              presets={FLOWER_PRESETS}
               selectedPreset={selectedPreset}
+              palette={palette}
               outlineEditor={outlineEditor}
               petalPreview={petalPreview}
               arrangementPreview={arrangementPreview}
@@ -642,6 +750,7 @@ export default function StudioCanvas() {
               playing={playing}
               exporting={exporting}
               onPresetChange={handlePresetChange}
+              onPaletteChange={handlePaletteChange}
               onPetalFormChange={handlePetalFormChange}
               onPhyllotaxisChange={handlePhyllotaxisChange}
               onWindChange={handleWindChange}

@@ -17,6 +17,12 @@ const DEFAULT_PETAL_GEOMETRY = {
   waveAmp: 0.035,
   asym: 0.08,
 };
+// Which params the "Reset Geometry" button restores — the single-petal shape,
+// read from the live reset baseline (so a preset's petals come back, not the
+// hard-coded rose ones).
+const PETAL_GEOMETRY_KEYS = Object.keys(
+  DEFAULT_PETAL_GEOMETRY,
+) as (keyof typeof DEFAULT_PETAL_GEOMETRY)[];
 
 export type PetalShapeState = {
   petalLen: number;
@@ -738,7 +744,9 @@ void main() {
   }
 
   function resetPetalGeometryParams() {
-    Object.assign(params, DEFAULT_PETAL_GEOMETRY);
+    for (const key of PETAL_GEOMETRY_KEYS) {
+      params[key] = initialParams[key];
+    }
     bakeRamps();
     syncShapeUniforms();
     petalGeometryCtrls.forEach((ctrl) => ctrl.updateDisplay());
@@ -1286,6 +1294,15 @@ void main() {
     },
     resetPetal() {
       resetPetalView();
+    },
+    /**
+     * Redirect what every reset (all / geometry / arrangement / wind / detail)
+     * restores to. The studio calls this on a preset change so resets return to
+     * the active flower's params instead of the boot rose. Only the patched
+     * keys move; unlisted params keep their current baseline.
+     */
+    setResetBaseline(patch: Partial<typeof params>) {
+      Object.assign(initialParams, patch);
     },
     /** Flat tone-shading vs. soft Lambert + subsurface lighting. */
     setFlat(on: boolean) {
