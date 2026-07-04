@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BLOOM — a flower grown from pure math",
+  title: "Bloom Animation Generator",
   description:
-    "A WebGL study in procedural botany: 36 petals, one draw call, zero modelled meshes. Scroll to drive the bloom.",
+    "Create, customize, preview, and export 3D flower-bloom animations from an interactive web studio.",
 };
 
 export default function RootLayout({

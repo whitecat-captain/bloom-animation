@@ -1,12 +1,25 @@
-# BLOOM
+# Bloom Animation Generator
 
-A Next.js 16 / React 19 WebGL study in procedural botany. The page is one interactive flower story: GSAP drives scroll, Three.js renders the flower, and lil-gui exposes the design controls.
+Bloom Animation Generator is a web app for creating 3D flower-bloom animations. Start from a procedural flower, tune the visual and motion controls, then preview or export the result as a polished blooming clip.
 
-**🌸 [View the live demo →](https://bloom-animation-mu.vercel.app)**
+👉 **Live Web App:** [bloom-animation-mu.vercel.app](https://bloom-animation-mu.vercel.app)
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Open-ff69b4?style=for-the-badge&logo=vercel)](https://bloom-animation-mu.vercel.app)
+<video src="./public/bloom-animation-generator-demo.mp4" controls muted loop playsinline width="100%">
+  Demo video: Bloom Animation Generator.
+</video>
 
-## 🌸 两种玩法 · Two ways to use this repo
+You can adjust:
+
+- Flower presets and overall bloom style
+- Petal colors, outlines, material, and render style
+- Petal geometry, curl, width, length, and 3D form
+- Petal arrangement, count, golden angle, radius, height, and tilt
+- Wind, natural variation, jitter, and organic motion details
+- Stem and leaf visibility, shape, color, and placement
+- Animation timing, preview playback, background, camera framing, and export settings
+
+<details>
+<summary><strong>两种玩法 · Two ways to use this repo</strong></summary>
 
 ### 1. 想理解 / 复刻这套绽放原理 — 看施工图
 
@@ -30,6 +43,8 @@ A Next.js 16 / React 19 WebGL study in procedural botany. The page is one intera
 4. **上传一张花朵图片**，输入以下 Prompt：
 
    > 分析图片中花的花瓣特征，排列规律，使用工程里的代码，构建一个全新的页面用于演示这朵花朵的绽放。代码结构和组件复用参考 `/demo` 页面
+
+</details>
 
 ## Acknowledgments
 

@@ -114,7 +114,7 @@ export function createFlowerScene(
     height: 0.155,
     heightBias: 1.2,
     scaleInner: 0.46,
-    tiltInner: 0.08,
+    tiltInner: 0.2,
     outAngle: 68,
     tiltBias: 2.2,
     // ===== Growth wavefront =====
