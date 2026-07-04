@@ -26,6 +26,80 @@
   outline: none;
 }
 
+.studio-loading {
+  display: grid;
+  place-items: center;
+}
+
+.studio-loading-card {
+  display: grid;
+  justify-items: center;
+  gap: 13px;
+  min-width: min(238px, calc(100vw - 48px));
+}
+
+.studio-loading-mark {
+  color: rgba(137, 205, 232, 0.72);
+  font-family: "Space Mono", ui-monospace, "SFMono-Regular", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+  text-shadow: 0 1px 12px rgba(5, 7, 15, 0.48);
+}
+
+.studio-loading-track {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  overflow: visible;
+  border-radius: 999px;
+  background: rgba(137, 205, 232, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(137, 205, 232, 0.1);
+}
+
+.studio-loading-progress {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 42%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(137, 205, 232, 0.32), #f1eae0);
+  box-shadow: 0 0 18px rgba(137, 205, 232, 0.42);
+  animation: studio-loading-progress 1.15s ease-in-out infinite;
+}
+
+.studio-loading-progress::after {
+  position: absolute;
+  top: 50%;
+  right: -10px;
+  width: 18px;
+  height: 18px;
+  content: "";
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse 18% 27% at 50% 16%, #f1eae0 0 96%, transparent 100%),
+    radial-gradient(ellipse 18% 27% at 84% 36%, #c4e6f4 0 96%, transparent 100%),
+    radial-gradient(ellipse 18% 27% at 70% 84%, #89cde8 0 96%, transparent 100%),
+    radial-gradient(ellipse 18% 27% at 30% 84%, #89cde8 0 96%, transparent 100%),
+    radial-gradient(ellipse 18% 27% at 16% 36%, #c4e6f4 0 96%, transparent 100%),
+    radial-gradient(circle at 50% 50%, #f1eae0 0 13%, #89cde8 14% 20%, transparent 21%);
+  filter: drop-shadow(0 0 8px rgba(137, 205, 232, 0.58));
+}
+
+@keyframes studio-loading-progress {
+  0% {
+    transform: translateX(-110%);
+  }
+  55% {
+    transform: translateX(90%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
 .studio-outline-editor {
   position: relative;
   min-width: 0;
@@ -215,7 +289,7 @@
 .studio-credit {
   position: fixed;
   left: 24px;
-  bottom: 22px;
+  bottom: 30px;
   z-index: 12;
   margin: 0;
   color: rgba(137, 205, 232, 0.82);

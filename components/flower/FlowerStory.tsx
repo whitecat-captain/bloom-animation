@@ -1,5 +1,18 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import type { RefObject } from "react";
 import type { FlowerStep } from "./storySteps";
+
+const STUDIO_HREF = "/studio";
+let studioBundlePromise: Promise<unknown> | null = null;
+
+function preloadStudioBundle() {
+  studioBundlePromise ??= import("./StudioCanvas");
+  return studioBundlePromise;
+}
 
 type FlowerStoryProps = {
   canvasRef: RefObject<HTMLDivElement | null>;
@@ -14,6 +27,32 @@ export function FlowerStory({
   steps,
   onBloom,
 }: FlowerStoryProps) {
+  const router = useRouter();
+  const warmedStudioRef = useRef(false);
+
+  const warmStudio = useCallback(() => {
+    if (warmedStudioRef.current) return;
+    warmedStudioRef.current = true;
+    router.prefetch(STUDIO_HREF);
+    void preloadStudioBundle();
+  }, [router]);
+
+  useEffect(() => {
+    if (typeof window.requestIdleCallback !== "function") {
+      const timeout = window.setTimeout(warmStudio, 1800);
+      return () => window.clearTimeout(timeout);
+    }
+
+    const idle = window.requestIdleCallback(warmStudio, { timeout: 2400 });
+    return () => window.cancelIdleCallback(idle);
+  }, [warmStudio]);
+
+  useEffect(() => {
+    if (!showFullDesignCta) return;
+    const timeout = window.setTimeout(warmStudio, 350);
+    return () => window.clearTimeout(timeout);
+  }, [showFullDesignCta, warmStudio]);
+
   return (
     <>
       <div ref={canvasRef} className="canvas-container" />
@@ -81,7 +120,7 @@ export function FlowerStory({
         </section>
       </main>
 
-      {showFullDesignCta ? (
+      {showFullDesignCta && (
         <div className="finale-actions">
           <button
             type="button"
@@ -94,29 +133,18 @@ export function FlowerStory({
             </svg>
             <span className="bloom-btn-text">Bloom</span>
           </button>
-          <a
+          <Link
             className="cta-design cta-design--full liquid-glass-strong"
-            href="/studio"
+            href={STUDIO_HREF}
+            prefetch
             aria-label="Design this flower"
+            onFocus={warmStudio}
+            onPointerEnter={warmStudio}
+            onTouchStart={warmStudio}
           >
             <span className="cta-design-text">Design Flower</span>
-          </a>
+          </Link>
         </div>
-      ) : (
-        <a
-          className="cta-design cta-design--mini liquid-glass-strong"
-          href="/studio"
-          aria-label="Open flower designer"
-        >
-          <svg className="flower-icon" viewBox="0 0 32 32" aria-hidden="true">
-            <circle className="flower-icon-petal" cx="16" cy="7.5" r="5.4" />
-            <circle className="flower-icon-petal" cx="24.1" cy="13.4" r="5.4" />
-            <circle className="flower-icon-petal" cx="21" cy="22.9" r="5.4" />
-            <circle className="flower-icon-petal" cx="11" cy="22.9" r="5.4" />
-            <circle className="flower-icon-petal" cx="7.9" cy="13.4" r="5.4" />
-            <circle className="flower-icon-core" cx="16" cy="16" r="4.2" />
-          </svg>
-        </a>
       )}
     </>
   );

@@ -707,52 +707,7 @@
   transform: translateX(-50%);
 }
 .cta-design--full::before { display: none; }
-.cta-design--mini {
-  left: auto;
-  right: 28px;
-  bottom: 24px;
-  width: 46px;
-  height: 46px;
-  min-width: 0;
-  justify-content: center;
-  gap: 0;
-  padding: 0;
-  opacity: 0.88;
-}
-.cta-design.shifted { right: 428px; }
-.cta-design--full.shifted {
-  left: calc(50% - 200px);
-  right: auto;
-}
-.cta-design .dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: linear-gradient(135deg, #ffb16e, #ff5a2e);
-  box-shadow: 0 0 10px rgba(255, 110, 60, 0.8);
-}
-.cta-design--full .dot {
-  width: 7px;
-  height: 7px;
-  opacity: 1;
-}
-.cta-design--mini .dot {
-  width: 6px;
-  height: 6px;
-}
 .cta-design-text { position: relative; z-index: 2; }
-.flower-icon {
-  position: relative;
-  z-index: 2;
-  width: 21px;
-  height: 21px;
-  overflow: visible;
-}
-.flower-icon-petal {
-  fill: rgba(255, 255, 255, 0.82);
-}
-.flower-icon-core {
-  fill: #ff8b5b;
-  filter: drop-shadow(0 0 6px rgba(255, 110, 60, 0.75));
-}
 .cta-design:hover { transform: scale(1.05); }
 .cta-design:active { transform: scale(0.95); }
 .cta-design--full:hover {
@@ -778,16 +733,6 @@
     min-width: 166px;
     padding: 11px 20px 12px;
   }
-  .cta-design--mini {
-    left: auto;
-    right: 16px;
-    bottom: 16px;
-    width: 42px;
-    height: 42px;
-    min-width: 0;
-    padding: 0;
-  }
-  .cta-design.shifted { right: 16px; opacity: 0; pointer-events: none; }
   .gui-container {
     width: calc(100vw - 24px);
     border-radius: 22px;
