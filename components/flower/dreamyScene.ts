@@ -51,13 +51,13 @@ export function createDreamyScene(container: HTMLElement) {
 
   // ===== ramp texture (R=width, G=curlDensity) — same bake as flowerScene =====
   const RAMP_RES = 256;
-  const rampData = new Float32Array(RAMP_RES * 4);
+  const rampData = new Uint16Array(RAMP_RES * 4);
   const rampTex = new THREE.DataTexture(
     rampData,
     RAMP_RES,
     1,
     THREE.RGBAFormat,
-    THREE.FloatType,
+    THREE.HalfFloatType,
   );
   rampTex.minFilter = rampTex.magFilter = THREE.LinearFilter;
 
@@ -81,13 +81,17 @@ export function createDreamyScene(container: HTMLElement) {
   {
     const { stemWidth, stemEnd, w0, w1, w2, w3, curlBias } = params;
     const widthPts = [stemWidth, w0, w1, w2, w3, 0.002];
+    const half = THREE.DataUtils.toHalfFloat;
     for (let i = 0; i < RAMP_RES; i++) {
       const v = i / (RAMP_RES - 1);
-      rampData[i * 4] =
+      rampData[i * 4] = half(
         v < stemEnd
           ? stemWidth
-          : Math.max(catmullRom(widthPts, (v - stemEnd) / (1 - stemEnd)), 0.002);
-      rampData[i * 4 + 1] = curlBias * Math.pow(Math.max(v, 1e-4), curlBias - 1);
+          : Math.max(catmullRom(widthPts, (v - stemEnd) / (1 - stemEnd)), 0.002),
+      );
+      rampData[i * 4 + 1] = half(
+        curlBias * Math.pow(Math.max(v, 1e-4), curlBias - 1),
+      );
     }
     rampTex.needsUpdate = true;
   }
