@@ -9,8 +9,8 @@ Bloom Animation Generator is a web app for creating 3D flower-bloom animations. 
 ## Features
 
 - **Design the flower** — choose a starting preset, then shape the petals, colors, outlines, stem, leaves, and overall render style.
-- **Control the bloom** — tune how the flower opens, from petal curl and arrangement to timing, wind, variation, and natural motion.
-- **Frame the scene** — adjust the background and camera view so the animation works as a clean visual asset, not just a raw canvas.
+- **Control the bloom** — tune how the flower opens, from petal curl and arrangement to the rhythm and timing of the bloom.
+- **Add organic movement** — layer in wind, variation, and small natural details so the animation feels less mechanical.
 - **Preview and export** — play the bloom in the browser, refine the look, and export still images or video clips for sharing.
 
 ## Local Development
