@@ -338,6 +338,13 @@ export default function StudioCanvas() {
     // resets start out pointing at it too.
     scene.setResetBaseline(FLOWER_PRESETS[0].params);
 
+    // Touch devices have no wheel and no Opt key, so give them OrbitControls'
+    // native two-finger pinch-zoom (dolly). Desktop keeps zoom off and uses the
+    // Opt/Alt+scroll handler below.
+    if (window.matchMedia("(pointer: coarse)").matches) {
+      scene.setWheelZoomEnabled(true);
+    }
+
     const zoomWithAltScroll = (event: WheelEvent) => {
       if (!event.altKey) return;
       const target = event.target;

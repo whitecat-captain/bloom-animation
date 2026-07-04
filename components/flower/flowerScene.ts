@@ -522,8 +522,13 @@ void main() {
     controls.target.y = baseTargetY - bloomTargetCompensation * bloomProgress;
   };
   controls.target.set(0, baseTargetY, 0);
-  // Wheel must keep scrolling the page story, so zoom stays off.
+  // Wheel must keep scrolling the page story, so zoom stays off by default.
+  // (Studio re-enables it on touch devices for two-finger pinch-zoom.)
   controls.enableZoom = false;
+  // Clamp OrbitControls' own dolly (used by mobile pinch) to the same range as
+  // the desktop Opt/Alt+scroll zoom, so pinch can't fly through or past the flower.
+  controls.minDistance = minZoomDistance;
+  controls.maxDistance = maxZoomDistance;
 
   // Scroll-driven rotation lives on the group so OrbitControls (camera)
   // and ScrollTrigger (flower) never fight over the same transform.
