@@ -7,7 +7,8 @@
   position: relative;
   width: 100%;
   min-height: 100vh;
-  overflow: hidden;
+  min-height: 100svh;
+  overflow-x: hidden;
   background: #05070f;
   font-family: "Inter", system-ui, -apple-system, sans-serif;
 }

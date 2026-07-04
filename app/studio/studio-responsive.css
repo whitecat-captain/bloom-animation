@@ -1,17 +1,37 @@
+@media (max-width: 1024px) {
+  .studio-sheet {
+    width: min(340px, calc(100vw - 32px));
+    margin: 16px 16px 28px auto;
+  }
+}
+
+@media (hover: none), (pointer: coarse), (max-width: 820px) {
+  .studio-controls-hint {
+    display: none;
+  }
+}
+
 @media (max-width: 760px) {
   .studio-petal-preview {
     flex-basis: 96px;
   }
-  /* Touch input has no mouse orbit/pan/zoom, and the sheet fills the bottom. */
-  .studio-controls-hint {
-    display: none;
-  }
   .studio-sheet {
-    top: auto;
-    bottom: 12px;
-    right: 12px;
-    left: 12px;
-    width: auto;
-    max-height: calc(100vh - 24px);
+    width: min(320px, calc(100vw - 64px));
+    margin: 12px 12px 28px auto;
+    --tp-blade-value-width: min(144px, 46vw);
+  }
+}
+
+@media (max-width: 380px) {
+  .studio-sheet {
+    width: min(280px, calc(100vw - 56px));
+    margin: 10px 10px 24px auto;
+    --tp-blade-value-width: min(124px, 42vw);
+  }
+
+  .studio-sheet .studio-sheet-control {
+    gap: 6px;
+    padding-right: 6px;
+    padding-left: 6px;
   }
 }

@@ -252,9 +252,23 @@ export default function StudioCanvas() {
       },
     );
     sceneRef.current = scene;
-    scene.setWheelZoomEnabled(true);
     scene.setBloom(scene.bloomMax);
+
+    const zoomWithAltScroll = (event: WheelEvent) => {
+      if (!event.altKey) return;
+      const target = event.target;
+      if (target instanceof Node && sheetRef.current?.contains(target)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      scene.zoomBy(event.deltaY);
+    };
+    window.addEventListener("wheel", zoomWithAltScroll, {
+      capture: true,
+      passive: false,
+    });
+
     return () => {
+      window.removeEventListener("wheel", zoomWithAltScroll, true);
       scene.dispose();
       sceneRef.current = null;
     };
@@ -584,7 +598,7 @@ export default function StudioCanvas() {
           <span className="studio-controls-hint-key">Right drag</span>Pan
         </span>
         <span className="studio-controls-hint-item">
-          <span className="studio-controls-hint-key">Scroll</span>Zoom
+          <span className="studio-controls-hint-key">Opt/Alt + scroll</span>Zoom
         </span>
       </div>
 

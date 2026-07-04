@@ -1,18 +1,10 @@
 /* --- Tweakpane sheet mounts --- */
 .studio-sheet {
-  position: fixed;
-  top: 24px;
-  right: 24px;
+  position: relative;
   z-index: 14;
-  width: 320px;
-  max-height: calc(100vh - 48px);
+  width: min(320px, calc(100vw - 48px));
   min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: none;
-}
-
-.studio-sheet::-webkit-scrollbar {
-  display: none;
+  margin: 24px 24px 32px auto;
 }
 
 .studio-sheet {
