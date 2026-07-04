@@ -10,6 +10,9 @@ import {
   type FlowerSceneApi,
 } from "./flowerScene";
 
+const FRAMING_SHIFT_START = 1;
+const FRAMING_SHIFT_END = 4.75;
+
 type FlowerSceneScrollRefs = {
   rootRef: RefObject<HTMLDivElement | null>;
   canvasRef: RefObject<HTMLDivElement | null>;
@@ -124,7 +127,14 @@ export function useFlowerSceneScroll({
         tl.to(proxy, { bloom: b }),
       );
       tl.to(proxy, { rot: Math.PI * 1.5, duration: 6 }, 0);
-      tl.to(proxy, { y: STUDIO_FLOWER_GROUP_Y }, 5);
+      tl.to(
+        proxy,
+        {
+          y: STUDIO_FLOWER_GROUP_Y,
+          duration: FRAMING_SHIFT_END - FRAMING_SHIFT_START,
+        },
+        FRAMING_SHIFT_START,
+      );
 
       gsap.utils.toArray<HTMLElement>(".step-card").forEach((card) => {
         gsap.from(card, {
