@@ -103,11 +103,11 @@ export function createFlowerScene(
     stableLayout: false,
     // false → lay petals in concentric rings (the "mechanical" wrong layout)
     outwardPush: true,
-    radius: 0.14,
+    radius: 0.165,
     radiusBias: 1.15,
-    height: 0.13,
+    height: 0.155,
     heightBias: 1.2,
-    scaleInner: 0.5,
+    scaleInner: 0.46,
     tiltInner: 0.08,
     outAngle: 68,
     tiltBias: 2.2,
@@ -138,10 +138,10 @@ export function createFlowerScene(
     jitter: 0.04,
     noiseAmp: 0.045,
     noiseFreq: 5.0,
-    windAmp: 0.09,
-    windSpeed: 1.0,
+    windAmp: 0.15,
+    windSpeed: 1.5,
     windHeading: 35,
-    shellGap: 0.14,
+    shellGap: 0.18,
     // How much a furled petal inflates while closed (width / cup). Defaults
     // reproduce the original hard-coded values; the dahlia lowers them so its
     // broad cupped petals don't balloon into a smooth onion before opening.
@@ -154,13 +154,17 @@ export function createFlowerScene(
 
   // ===== ramp texture (R=width, G=curlDensity) =====
   const RAMP_RES = 256;
-  const rampData = new Float32Array(RAMP_RES * 4);
+  // Half-float (RGBA16F), not 32-bit float: WebGL2 guarantees RGBA16F is
+  // linear-filterable everywhere, whereas 32-bit float linear filtering needs
+  // OES_texture_float_linear — absent on iOS Safari, where the vertex-shader
+  // sample then returns 0 and every petal collapses into a thin spike.
+  const rampData = new Uint16Array(RAMP_RES * 4);
   const rampTex = new THREE.DataTexture(
     rampData,
     RAMP_RES,
     1,
     THREE.RGBAFormat,
-    THREE.FloatType,
+    THREE.HalfFloatType,
   );
   rampTex.minFilter = rampTex.magFilter = THREE.LinearFilter;
 
@@ -184,13 +188,17 @@ export function createFlowerScene(
   function bakeRamps() {
     const { stemWidth, stemEnd, w0, w1, w2, w3, curlBias } = params;
     const widthPts = [stemWidth, w0, w1, w2, w3, 0.002];
+    const half = THREE.DataUtils.toHalfFloat;
     for (let i = 0; i < RAMP_RES; i++) {
       const v = i / (RAMP_RES - 1);
-      rampData[i * 4] =
+      const width =
         v < stemEnd
           ? stemWidth
           : Math.max(catmullRom(widthPts, (v - stemEnd) / (1 - stemEnd)), 0.002);
-      rampData[i * 4 + 1] = curlBias * Math.pow(Math.max(v, 1e-4), curlBias - 1);
+      rampData[i * 4] = half(width);
+      rampData[i * 4 + 1] = half(
+        curlBias * Math.pow(Math.max(v, 1e-4), curlBias - 1),
+      );
     }
     rampTex.needsUpdate = true;
   }
