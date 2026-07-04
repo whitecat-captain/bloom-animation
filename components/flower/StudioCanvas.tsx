@@ -260,7 +260,17 @@ export default function StudioCanvas() {
       if (target instanceof Node && sheetRef.current?.contains(target)) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      scene.zoomBy(event.deltaY);
+      // Normalise to pixels first: mouse wheels commonly report lines
+      // (deltaMode 1, deltaY ~±3) — far too small for the exp()-based zoom to
+      // register — while trackpads report pixels. Without this a mouse feels
+      // like Opt+scroll "does nothing".
+      const unit =
+        event.deltaMode === 1
+          ? 16
+          : event.deltaMode === 2
+            ? window.innerHeight
+            : 1;
+      scene.zoomBy(event.deltaY * unit);
     };
     window.addEventListener("wheel", zoomWithAltScroll, {
       capture: true,
