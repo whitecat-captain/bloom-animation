@@ -1,0 +1,17 @@
+@media (max-width: 760px) {
+  .studio-petal-preview {
+    flex-basis: 96px;
+  }
+  /* Touch input has no mouse orbit/pan/zoom, and the sheet fills the bottom. */
+  .studio-controls-hint {
+    display: none;
+  }
+  .studio-sheet {
+    top: auto;
+    bottom: 12px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-height: calc(100vh - 24px);
+  }
+}

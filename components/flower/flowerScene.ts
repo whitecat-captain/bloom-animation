@@ -77,6 +77,9 @@ type FlowerSceneOptions = {
   flowerGroupY?: number;
 };
 
+export const STORY_FLOWER_GROUP_Y = 0.45;
+export const STUDIO_FLOWER_GROUP_Y = 0.78;
+
 type DisplayController = {
   updateDisplay: () => void;
 };
@@ -511,7 +514,7 @@ void main() {
   // Scroll-driven rotation lives on the group so OrbitControls (camera)
   // and ScrollTrigger (flower) never fight over the same transform.
   const flowerGroup = new THREE.Group();
-  flowerGroup.position.y = options.flowerGroupY ?? 0.45;
+  flowerGroup.position.y = options.flowerGroupY ?? STORY_FLOWER_GROUP_Y;
   flowerGroup.scale.setScalar(1.3);
   scene.add(flowerGroup);
 
@@ -1056,6 +1059,10 @@ void main() {
     /** Scroll-driven turntable rotation of the whole flower. */
     setRotation(y: number) {
       flowerGroup.rotation.y = y;
+    },
+    /** Scroll-driven vertical framing of the flower group. */
+    setFlowerGroupY(y: number) {
+      flowerGroup.position.y = y;
     },
     /** One-shot replay of the bud -> full bloom; drives the finale Bloom button. */
     playBloom() {

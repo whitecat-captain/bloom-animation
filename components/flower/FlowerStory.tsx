@@ -1,18 +1,6 @@
-"use client";
-
-import Link from "next/link";
-import { useCallback, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import type { RefObject } from "react";
+import { StudioCtaLink, StudioRoutePreloader } from "./StudioRouteLink";
 import type { FlowerStep } from "./storySteps";
-
-const STUDIO_HREF = "/studio";
-let studioBundlePromise: Promise<unknown> | null = null;
-
-function preloadStudioBundle() {
-  studioBundlePromise ??= import("./StudioCanvas");
-  return studioBundlePromise;
-}
 
 type FlowerStoryProps = {
   canvasRef: RefObject<HTMLDivElement | null>;
@@ -27,34 +15,9 @@ export function FlowerStory({
   steps,
   onBloom,
 }: FlowerStoryProps) {
-  const router = useRouter();
-  const warmedStudioRef = useRef(false);
-
-  const warmStudio = useCallback(() => {
-    if (warmedStudioRef.current) return;
-    warmedStudioRef.current = true;
-    router.prefetch(STUDIO_HREF);
-    void preloadStudioBundle();
-  }, [router]);
-
-  useEffect(() => {
-    if (typeof window.requestIdleCallback !== "function") {
-      const timeout = window.setTimeout(warmStudio, 1800);
-      return () => window.clearTimeout(timeout);
-    }
-
-    const idle = window.requestIdleCallback(warmStudio, { timeout: 2400 });
-    return () => window.cancelIdleCallback(idle);
-  }, [warmStudio]);
-
-  useEffect(() => {
-    if (!showFullDesignCta) return;
-    const timeout = window.setTimeout(warmStudio, 350);
-    return () => window.clearTimeout(timeout);
-  }, [showFullDesignCta, warmStudio]);
-
   return (
     <>
+      <StudioRoutePreloader />
       <div ref={canvasRef} className="canvas-container" />
 
       <main className="story">
@@ -133,17 +96,12 @@ export function FlowerStory({
             </svg>
             <span className="bloom-btn-text">Bloom</span>
           </button>
-          <Link
+          <StudioCtaLink
+            ariaLabel="Design this flower"
             className="cta-design cta-design--full liquid-glass-strong"
-            href={STUDIO_HREF}
-            prefetch
-            aria-label="Design this flower"
-            onFocus={warmStudio}
-            onPointerEnter={warmStudio}
-            onTouchStart={warmStudio}
           >
             <span className="cta-design-text">Design Flower</span>
-          </Link>
+          </StudioCtaLink>
         </div>
       )}
     </>

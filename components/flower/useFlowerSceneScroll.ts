@@ -3,7 +3,12 @@ import gsap from "gsap";
 import { Observer } from "gsap/Observer";
 import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { createFlowerScene, type FlowerSceneApi } from "./flowerScene";
+import {
+  createFlowerScene,
+  STORY_FLOWER_GROUP_Y,
+  STUDIO_FLOWER_GROUP_Y,
+  type FlowerSceneApi,
+} from "./flowerScene";
 
 type FlowerSceneScrollRefs = {
   rootRef: RefObject<HTMLDivElement | null>;
@@ -73,10 +78,11 @@ export function useFlowerSceneScroll({
           delay: 0.2,
         });
 
-      const proxy = { bloom: 0.04, rot: 0 };
+      const proxy = { bloom: 0.04, rot: 0, y: STORY_FLOWER_GROUP_Y };
       const apply = () => {
         scene.setBloom(proxy.bloom);
         scene.setRotation(proxy.rot);
+        scene.setFlowerGroupY(proxy.y);
       };
       apply();
 
@@ -118,6 +124,7 @@ export function useFlowerSceneScroll({
         tl.to(proxy, { bloom: b }),
       );
       tl.to(proxy, { rot: Math.PI * 1.5, duration: 6 }, 0);
+      tl.to(proxy, { y: STUDIO_FLOWER_GROUP_Y }, 5);
 
       gsap.utils.toArray<HTMLElement>(".step-card").forEach((card) => {
         gsap.from(card, {

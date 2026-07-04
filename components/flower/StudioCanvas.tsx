@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pane, type TabPageApi } from "tweakpane";
 import {
   createFlowerScene,
+  STUDIO_FLOWER_GROUP_Y,
   type FlowerDesignState,
   type FlowerSceneApi,
   type PetalShapeState,
@@ -245,7 +246,7 @@ export default function StudioCanvas() {
       null,
       null,
       {
-        flowerGroupY: 0.78,
+        flowerGroupY: STUDIO_FLOWER_GROUP_Y,
         onPetalShapeChange: setPetalShape,
         onDesignStateChange: setDesignState,
       },
