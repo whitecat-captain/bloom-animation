@@ -6,8 +6,6 @@ Bloom Animation Generator is a web app for creating 3D flower-bloom animations. 
 
 ![Bloom Animation Generator demo](./public/bloom-animation-generator-demo.gif)
 
-[Watch the MP4 demo](./public/bloom-animation-generator-demo.mp4)
-
 You can adjust:
 
 - Flower presets and overall bloom style
