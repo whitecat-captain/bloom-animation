@@ -4,9 +4,9 @@ Bloom Animation Generator is a web app for creating 3D flower-bloom animations. 
 
 👉 **Live Web App:** [bloom-animation-mu.vercel.app](https://bloom-animation-mu.vercel.app)
 
-<video src="./public/bloom-animation-generator-demo.mp4" controls muted loop playsinline width="100%">
-  Demo video: Bloom Animation Generator.
-</video>
+![Bloom Animation Generator demo](./public/bloom-animation-generator-demo.gif)
+
+[Watch the MP4 demo](./public/bloom-animation-generator-demo.mp4)
 
 You can adjust:
 
