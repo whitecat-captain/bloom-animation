@@ -250,7 +250,7 @@ const FLOWER_PRESETS: FlowerPreset[] = [
     params: AURORA_ROSE_PARAMS,
   },
   {
-    name: "Crimson Dahlia",
+    name: "Blush Dahlia",
     // Soft pink tips, clear crimson faces, and a deep burgundy centre.
     palette: [
       [0.984, 0.706, 0.737],
