@@ -8,10 +8,7 @@ import {
   type FolderApi,
   type TabPageApi,
 } from "tweakpane";
-import {
-  StudioSwitchButton,
-  StudioTwoButtonSelect,
-} from "./StudioSheetControls";
+import { StudioSwitchButton } from "./StudioSheetControls";
 
 type BgMode = "transparent" | "solid";
 
@@ -91,14 +88,6 @@ type StudioExportPaneProps = {
 
 const TRANSPARENT_OUTPUT_NOTE =
   "PNG sequence (.zip) with alpha. ffmpeg: -framerate 30 -i flower_%04d.png -c:v prores_ks -profile:v 4444 -pix_fmt yuva444p10le flower.mov";
-
-const BG_MODE_OPTIONS: [
-  { label: string; value: BgMode },
-  { label: string; value: BgMode },
-] = [
-  { label: "Solid", value: "solid" },
-  { label: "Transparent", value: "transparent" },
-];
 
 function optionMap<T extends string | number>(
   entries: Array<{ label: string; value: T }>,
@@ -445,12 +434,16 @@ export default function StudioExportPane({
     const roots = rootsRef.current;
     if (!roots) return;
 
+    // A plain checkbox: on -> transparent background, so both the PNG still and
+    // the video (PNG sequence) export with an alpha channel; off -> solid.
     roots.bgMode.render(
-      <StudioTwoButtonSelect
-        label="Mode"
-        value={bgMode}
-        options={BG_MODE_OPTIONS}
-        onChange={(value) => callbacksRef.current.onBgModeChange(value)}
+      <StudioSwitchButton
+        label="Transparent"
+        checked={bgMode === "transparent"}
+        disabled={exporting}
+        onChange={(checked) =>
+          callbacksRef.current.onBgModeChange(checked ? "transparent" : "solid")
+        }
       />,
     );
     roots.cameraFrame.render(
