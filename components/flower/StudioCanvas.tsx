@@ -120,6 +120,7 @@ const AURORA_ROSE_PARAMS: FlowerPresetParams = {
   tiltInner: 0.2,
   outAngle: 68,
   tiltBias: 2.2,
+  transition: 0.35,
   petalLen: 0.95,
   curlClosed: 1.7,
   curlOpen: -0.35,
@@ -162,6 +163,7 @@ const CRIMSON_DAHLIA_PARAMS: FlowerPresetParams = {
   tiltInner: 0.5, // inner florets stand up out of the throat
   outAngle: 122, // rim tips past horizontal -> the drooping skirt
   tiltBias: 1.75, // mid rings open up too — only the very centre stays furled
+  transition: 0.35,
   petalLen: 0.95, // long, slender petals
   curlClosed: 1.85,
   curlOpen: -0.12, // gentle backward arch so the skirt drapes, not spikes
@@ -189,6 +191,52 @@ const CRIMSON_DAHLIA_PARAMS: FlowerPresetParams = {
   flat: false,
 };
 
+// Garland (crown) daisy. Unlike the rose/dahlia dome recipe, this is a FLAT
+// star rosette: a tiny bloom radius with a steep radial spread makes every
+// ray sprout from one central hub (like real rays ringing the disc), zero
+// centre height keeps it flat, and a low outer angle with an early tilt
+// falloff fans the rays up and out into the star. Hand-tuned in the studio.
+const GARLAND_DAISY_PARAMS: FlowerPresetParams = {
+  numPetals: 51,
+  goldenAngle: 137.5,
+  outwardPush: true,
+  radius: 0.1, // all rays attach at a tight central hub...
+  radiusBias: 3.0, // ...and only the outermost drift off it
+  height: 0.0, // completely flat rosette, no dome
+  heightBias: 1.2,
+  scaleInner: 0.1, // disc florets stay tiny against the long rays
+  tiltInner: 0.8, // every ray leans well out from the vertical
+  outAngle: 37.4, // rays fan upward-out, star-like — not pancake-flat
+  tiltBias: 0.7, // tilt arrives early, so the whole ring shares the fan
+  // A wide bloom wavefront keeps the centre florets half-open — splayed
+  // little tubes that read as the fluffy golden disc of a real daisy.
+  transition: 0.55,
+  petalLen: 1.05, // long slender straps
+  curlClosed: 1.6,
+  curlOpen: 0.08, // almost flat, the faintest upward scoop
+  curlBias: 2.0,
+  propagation: 1.2,
+  // Strap (ligulate) profile: near-parallel edges, softly rounded tip.
+  w0: 0.07,
+  w1: 0.13,
+  w2: 0.16,
+  w3: 0.14,
+  cup: 0.3, // shallow lengthwise groove
+  sideCurl: 0.25,
+  wrapWidth: 0.15,
+  wrapCup: 0.3,
+  waveAmp: 0.02,
+  asym: 0.05,
+  jitter: 0.06, // a little raggedness — real rays never sit perfectly
+  noiseAmp: 0.04,
+  noiseFreq: 6,
+  shellGap: 0.1,
+  windAmp: 0.16, // light rays flutter more than heavy dahlia scales
+  windSpeed: 1.6,
+  windHeading: 35,
+  flat: false, // soft light so the golden disc reads as a dome
+};
+
 const FLOWER_PRESETS: FlowerPreset[] = [
   {
     name: "Aurora Rose",
@@ -203,17 +251,33 @@ const FLOWER_PRESETS: FlowerPreset[] = [
   },
   {
     name: "Crimson Dahlia",
-    // Cool velvet crimson, read off the reference photo: rosy light kissing
-    // the outer petal tips, rich blue-leaning crimson faces (never orange),
-    // sinking to a dark burgundy at the furled centre.
+    // Soft pink tips, clear crimson faces, and a deep burgundy centre.
     palette: [
-      [1.0, 0.42, 0.48],
-      [0.87, 0.1, 0.2],
-      [0.7, 0.04, 0.14],
-      [0.45, 0.02, 0.1],
-      [0.24, 0.01, 0.07],
+      [0.984, 0.706, 0.737],
+      [1.0, 0.435, 0.506],
+      [0.773, 0.094, 0.2],
+      [0.451, 0.02, 0.102],
+      [0.239, 0.012, 0.071],
     ],
     params: CRIMSON_DAHLIA_PARAMS,
+  },
+  {
+    name: "Garland Daisy",
+    // White rays that warm into a yellow wash at their base, then a golden
+    // disc: white tips (c0-c1), pale-yellow transition (c2), marigold heart
+    // (c3-c4). The shader's closeness ramp puts c3/c4 on petal bases and the
+    // furled centre florets, which is exactly where the photo carries gold.
+    // Rays stay white for their upper two-thirds (c0/c1); the yellow wash is
+    // compressed into c2 so it only climbs the lower third of each ray, then
+    // c3/c4 carry the marigold disc — matching the photo's colour bands.
+    palette: [
+      [1.0, 1.0, 0.97],
+      [1.0, 0.98, 0.9],
+      [1.0, 0.85, 0.42],
+      [1.0, 0.65, 0.1],
+      [0.85, 0.5, 0.04],
+    ],
+    params: GARLAND_DAISY_PARAMS,
   },
 ];
 
@@ -330,6 +394,9 @@ export default function StudioCanvas() {
         flowerGroupY: STUDIO_FLOWER_GROUP_Y,
         onPetalShapeChange: setPetalShape,
         onDesignStateChange: setDesignState,
+        // The studio exports PNGs from this canvas, so its frame must stay
+        // readable after compositing.
+        exportSurface: true,
       },
     );
     sceneRef.current = scene;

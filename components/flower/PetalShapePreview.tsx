@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { startVisibilityGatedLoop } from "./visibilityLoop";
 import type { PetalShapeState } from "./flowerScene";
 
 const STEM_WIDTH = 0.03;
@@ -269,16 +270,15 @@ export default function PetalShapePreview({
     ro.observe(host);
     resize();
 
-    let raf = 0;
-    const render = () => {
+    // Render only while the box is on screen — a collapsed folder must not
+    // keep a WebGL context spinning at full frame rate.
+    const stopLoop = startVisibilityGatedLoop(host, () => {
       controls.update();
       renderer.render(scene, camera);
-      raf = requestAnimationFrame(render);
-    };
-    render();
+    });
 
     return () => {
-      cancelAnimationFrame(raf);
+      stopLoop();
       ro.disconnect();
       controls.dispose();
       scene.remove(openMesh, openGuide);

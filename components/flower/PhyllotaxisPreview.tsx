@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { FlowerDesignState } from "./flowerScene";
+import { startVisibilityGatedLoop } from "./visibilityLoop";
 
 type LayoutState = FlowerDesignState["phyllotaxis"];
 type PaletteStops = [number, number, number][];
@@ -126,16 +127,15 @@ export default function PhyllotaxisPreview({
 
     drawRef.current = () => renderer.render(scene, camera);
 
-    let raf = 0;
-    const render = () => {
+    // Render only while the box is on screen — a collapsed folder must not
+    // keep a WebGL context spinning at full frame rate.
+    const stopLoop = startVisibilityGatedLoop(host, () => {
       controls.update();
       renderer.render(scene, camera);
-      raf = requestAnimationFrame(render);
-    };
-    render();
+    });
 
     return () => {
-      cancelAnimationFrame(raf);
+      stopLoop();
       ro.disconnect();
       controls.dispose();
       const mesh = meshRef.current;

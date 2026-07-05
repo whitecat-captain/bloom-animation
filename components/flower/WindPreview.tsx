@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { FlowerDesignState } from "./flowerScene";
+import { startVisibilityGatedLoop } from "./visibilityLoop";
 
 // Only the parameters the demo visualises — a narrow prop keeps the parent's
 // memoisation simple (unrelated wind params don't re-render this).
@@ -236,7 +237,6 @@ export default function WindPreview({
     const startTime = performance.now();
     const windDir = new THREE.Vector3();
     const windPerp = new THREE.Vector3();
-    let raf = 0;
     let lastTime = 0;
 
     const render = () => {
@@ -311,12 +311,14 @@ export default function WindPreview({
 
       controls.update();
       renderer.render(scene, camera);
-      raf = requestAnimationFrame(render);
     };
-    render();
+    // Render only while the box is on screen — a collapsed folder must not
+    // keep a WebGL context spinning at full frame rate. lastTime is absolute,
+    // but dt is capped at 0.1s, so resuming after a pause can't jump the sway.
+    const stopLoop = startVisibilityGatedLoop(host, render);
 
     return () => {
-      cancelAnimationFrame(raf);
+      stopLoop();
       ro.disconnect();
       controls.dispose();
       scene.remove(ground, arrow, stalks, streakLines);

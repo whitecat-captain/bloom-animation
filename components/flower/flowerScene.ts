@@ -81,6 +81,12 @@ type FlowerSceneOptions = {
   onDesignStateChange?: (state: FlowerDesignState) => void;
   onActiveDesignTabChange?: (title: string) => void;
   flowerGroupY?: number;
+  /**
+   * Keep the drawing buffer readable after compositing (canvas.toBlob /
+   * readPixels) — required by the studio's PNG exporters, but a per-frame
+   * cost every other page shouldn't pay. Defaults to off.
+   */
+  exportSurface?: boolean;
 };
 
 export const STORY_FLOWER_GROUP_Y = 0.45;
@@ -497,12 +503,12 @@ void main() {
   const width = canvasContainer.clientWidth;
   const height = canvasContainer.clientHeight;
 
-  // preserveDrawingBuffer keeps the rendered frame readable by canvas.toBlob()
-  // / readPixels after compositing — required by the studio PNG exporters.
   const renderer = new THREE.WebGLRenderer({
     antialias: true,
     alpha: true,
-    preserveDrawingBuffer: true,
+    // Only the studio (exportSurface) needs the frame readable after
+    // compositing; the story/showcase pages skip that per-frame cost.
+    preserveDrawingBuffer: options.exportSurface === true,
   });
   renderer.setSize(width, height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));

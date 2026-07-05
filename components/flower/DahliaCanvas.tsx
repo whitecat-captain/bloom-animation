@@ -59,13 +59,13 @@ const DAHLIA_PRESET = {
   flat: false, // soft Lambert + subsurface so the dense ball reads in 3D
 };
 
-// Five-stop ramp, cold rim (tip / outer ring) -> hot core (base / centre).
+// Five-stop ramp, pale tip / outer ring -> dark burgundy core.
 const DAHLIA_PALETTE: [number, number, number][] = [
-  [1.0, 0.46, 0.34], // bright coral highlight on the tips
-  [0.97, 0.22, 0.18], // scarlet
-  [0.85, 0.1, 0.13], // pure red petal face
-  [0.55, 0.04, 0.1], // crimson shadow
-  [0.3, 0.02, 0.07], // deep maroon furled throat
+  [0.984, 0.706, 0.737], // #fbb4bc tip
+  [1.0, 0.435, 0.506], // #ff6f81 outer
+  [0.773, 0.094, 0.2], // #c51833 mid
+  [0.451, 0.02, 0.102], // #73051a inner
+  [0.239, 0.012, 0.071], // #3d0312 core
 ];
 
 export default function DahliaCanvas() {
