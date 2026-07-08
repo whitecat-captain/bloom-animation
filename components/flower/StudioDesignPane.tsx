@@ -29,8 +29,7 @@ type DesignPaneParams = Pick<PetalShapeState, PetalFormKey> &
   FlowerDesignState["stem"] &
   FlowerDesignState["renderStyle"] & {
     preset: number;
-    duration: number;
-    previewTime: number;
+    previewBloom: number;
   };
 
 type RefreshableBlade = BladeApi & {
@@ -51,8 +50,7 @@ type DesignPaneBindings = Record<
   | RenderStyleKey
   | StemKey
   | "preset"
-  | "duration"
-  | "previewTime",
+  | "previewBloom",
   RefreshableBlade
 > & {
   playPreviewButton: ButtonApi;
@@ -98,9 +96,7 @@ type StudioDesignPaneProps = {
   petalPreview: ReactNode;
   arrangementPreview: ReactNode;
   windPreview: ReactNode;
-  duration: number;
-  previewTime: number;
-  playing: boolean;
+  previewBloom: number;
   exporting: boolean;
   onPresetChange: (index: number) => void;
   onPaletteChange: (index: number, rgb: [number, number, number]) => void;
@@ -108,8 +104,8 @@ type StudioDesignPaneProps = {
   onPhyllotaxisChange: (key: PhyllotaxisKey, value: number) => void;
   onWindChange: (key: WindKey, value: number) => void;
   onRenderStyleChange: (key: RenderStyleKey, value: boolean) => void;
-  onDurationChange: (duration: number) => void;
-  onTogglePlay: () => void;
+  onPreviewBloomChange: (progress: number) => void;
+  onPlayPreview: () => void;
   onResetAll: () => void;
   onStemChange: <K extends StemKey>(
     key: K,
@@ -142,8 +138,8 @@ const SYNC_GUARD_CALLBACKS = {
   onPhyllotaxisChange: noop,
   onWindChange: noop,
   onRenderStyleChange: noop,
-  onDurationChange: noop,
-  onTogglePlay: noop,
+  onPreviewBloomChange: noop,
+  onPlayPreview: noop,
   onResetAll: noop,
   onStemChange: noop,
   onResetPetalGeometry: noop,
@@ -151,14 +147,6 @@ const SYNC_GUARD_CALLBACKS = {
   onResetWind: noop,
   onResetNaturalDetail: noop,
 };
-
-function setPreviewExitState(button: ButtonApi, active: boolean) {
-  button.element.classList.toggle("is-preview-exit", active);
-  const tip = active ? "Preview is playing. Click to exit preview." : "";
-  if (button.element.title !== tip) button.element.title = tip;
-  const action = button.element.querySelector<HTMLButtonElement>(".tp-btnv_b");
-  if (action && action.title !== tip) action.title = tip;
-}
 
 export default function StudioDesignPane({
   pane,
@@ -171,9 +159,7 @@ export default function StudioDesignPane({
   petalPreview,
   arrangementPreview,
   windPreview,
-  duration,
-  previewTime,
-  playing,
+  previewBloom,
   exporting,
   onPresetChange,
   onPaletteChange,
@@ -181,8 +167,8 @@ export default function StudioDesignPane({
   onPhyllotaxisChange,
   onWindChange,
   onRenderStyleChange,
-  onDurationChange,
-  onTogglePlay,
+  onPreviewBloomChange,
+  onPlayPreview,
   onResetAll,
   onStemChange,
   onResetPetalGeometry,
@@ -200,8 +186,8 @@ export default function StudioDesignPane({
     onPhyllotaxisChange,
     onWindChange,
     onRenderStyleChange,
-    onDurationChange,
-    onTogglePlay,
+    onPreviewBloomChange,
+    onPlayPreview,
     onResetAll,
     onStemChange,
     onResetPetalGeometry,
@@ -211,8 +197,7 @@ export default function StudioDesignPane({
   });
   const paramsRef = useRef<DesignPaneParams>({
     preset: selectedPreset,
-    duration,
-    previewTime,
+    previewBloom: previewBloom * 100,
     curlOpen: shape.curlOpen,
     curlBias: shape.curlBias,
     cup: shape.cup,
@@ -238,8 +223,8 @@ export default function StudioDesignPane({
       onPhyllotaxisChange,
       onWindChange,
       onRenderStyleChange,
-      onDurationChange,
-      onTogglePlay,
+      onPreviewBloomChange,
+      onPlayPreview,
       onResetAll,
       onStemChange,
       onResetPetalGeometry,
@@ -248,10 +233,11 @@ export default function StudioDesignPane({
       onResetNaturalDetail,
     };
   }, [
-    onDurationChange,
     onPaletteChange,
     onPetalFormChange,
     onPhyllotaxisChange,
+    onPlayPreview,
+    onPreviewBloomChange,
     onPresetChange,
     onResetAll,
     onRenderStyleChange,
@@ -260,7 +246,6 @@ export default function StudioDesignPane({
     onResetPetalGeometry,
     onResetWind,
     onStemChange,
-    onTogglePlay,
     onWindChange,
   ]);
 
@@ -599,30 +584,21 @@ export default function StudioDesignPane({
       callbacksRef.current.onStemChange("length", event.value);
     });
 
-    // Mirrors Export → Video Export's preview trio (duration / clock / play),
-    // minus resolution and the export button.
     const animationPreview = pane.addFolder({
       title: "Animation Preview",
       expanded: true,
     });
     createdBlades.push(animationPreview);
-    const durationBinding = animationPreview.addBinding(params, "duration", {
-      label: "Duration",
-      min: 2,
-      max: 10,
+    const previewBloomBinding = animationPreview.addBinding(params, "previewBloom", {
+      label: "Bloom",
+      min: 0,
+      max: 100,
       step: 1,
-      format: (value) => `${value.toFixed(0)}s`,
+      format: (value) => `${value.toFixed(0)}%`,
     }) as ChangeableBlade<number>;
-    durationBinding.on("change", (event) => {
-      callbacksRef.current.onDurationChange(event.value);
+    previewBloomBinding.on("change", (event) => {
+      callbacksRef.current.onPreviewBloomChange(event.value / 100);
     });
-    const previewTimeBinding = animationPreview.addBinding(params, "previewTime", {
-      label: "Time",
-      readonly: true,
-      // Manual ticker — the refresh effect drives updates; no idle polling.
-      interval: 0,
-      format: (value) => `${value.toFixed(1)}s`,
-    }) as RefreshableBlade;
     const playPreviewButton = animationPreview.addButton({
       title: "Play",
     });
@@ -631,7 +607,7 @@ export default function StudioDesignPane({
       "studio-design-preview-button",
     );
     playPreviewButton.on("click", () => {
-      callbacksRef.current.onTogglePlay();
+      callbacksRef.current.onPlayPreview();
     });
 
     paneRef.current = pane;
@@ -671,8 +647,7 @@ export default function StudioDesignPane({
       show,
       length,
       leaves,
-      duration: durationBinding,
-      previewTime: previewTimeBinding,
+      previewBloom: previewBloomBinding,
       playPreviewButton,
       resetAllButton,
     };
@@ -718,8 +693,7 @@ export default function StudioDesignPane({
     const bindings = bindingsRef.current;
     const next: DesignPaneParams = {
       preset: selectedPreset,
-      duration,
-      previewTime,
+      previewBloom: previewBloom * 100,
       curlOpen: shape.curlOpen,
       curlBias: shape.curlBias,
       cup: shape.cup,
@@ -760,18 +734,16 @@ export default function StudioDesignPane({
     }
 
     if (!bindings) return;
-    const playTitle = playing ? "Exit Preview" : "Play";
-    if (bindings.playPreviewButton.title !== playTitle) {
-      bindings.playPreviewButton.title = playTitle;
+    if (bindings.playPreviewButton.title !== "Play") {
+      bindings.playPreviewButton.title = "Play";
     }
-    setPreviewExitState(bindings.playPreviewButton, playing);
-    if (bindings.duration.disabled !== exporting) {
-      bindings.duration.disabled = exporting;
+    if (bindings.previewBloom.disabled !== exporting) {
+      bindings.previewBloom.disabled = exporting;
     }
     if (bindings.playPreviewButton.disabled !== exporting) {
       bindings.playPreviewButton.disabled = exporting;
     }
-  }, [designState, duration, exporting, palette, playing, previewTime, selectedPreset, shape]);
+  }, [designState, exporting, palette, previewBloom, selectedPreset, shape]);
 
   return null;
 }

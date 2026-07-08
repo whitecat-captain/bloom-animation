@@ -9,7 +9,7 @@
   min-height: 100vh;
   min-height: 100svh;
   overflow-x: hidden;
-  background: #05070f;
+  background: #000;
   font-family: "Inter", system-ui, -apple-system, sans-serif;
 }
 
@@ -18,7 +18,7 @@
   position: fixed;
   inset: 0;
   z-index: 1;
-  background: #05070f;
+  background: #000;
 }
 .studio-stage canvas {
   display: block;

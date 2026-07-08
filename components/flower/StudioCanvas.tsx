@@ -36,6 +36,10 @@ type StudioSheetPages = {
   export: TabPageApi;
 };
 
+// The flower reads fully open before the shader curve reaches 1.0. Keep the
+// Design scrubber focused on the visible part of the bloom.
+const DESIGN_PREVIEW_COMPLETE_PROGRESS = 0.7;
+
 // Resolutions are target heights; the width is derived from the live canvas
 // aspect at export time so the output frames the flower exactly as previewed.
 const RES_OPTIONS: { label: string; h: number }[] = [
@@ -291,7 +295,7 @@ export default function StudioCanvas() {
   const sceneRef = useRef<FlowerSceneApi | null>(null);
 
   const [bgMode, setBgMode] = useState<BgMode>("solid");
-  const [color, setColor] = useState("#0b1020");
+  const [color, setColor] = useState("#000000");
   // Aurora Rose (index 0) mirrors the scene's boot defaults, so it starts
   // selected. The palette is deliberately its own state, decoupled from the
   // preset: picking a preset seeds it, then each stop is editable on its own.
@@ -309,70 +313,140 @@ export default function StudioCanvas() {
   const [exporting, setExporting] = useState(false);
   const [exportKind, setExportKind] = useState<"image" | "video" | null>(null);
   const [progress, setProgress] = useState(0);
-  const [previewTime, setPreviewTime] = useState(0);
+  const [exportPreviewTime, setExportPreviewTime] = useState(0);
+  const [exportPreviewPlaying, setExportPreviewPlaying] = useState(false);
+  const [designPreviewBloom, setDesignPreviewBloom] = useState(1);
   const [sheetPages, setSheetPages] = useState<StudioSheetPages | null>(null);
   const [petalPreviewResetKey, setPetalPreviewResetKey] = useState(0);
   const [arrangementPreviewResetKey, setArrangementPreviewResetKey] = useState(0);
   const [windPreviewResetKey, setWindPreviewResetKey] = useState(0);
 
-  // Duration is the export clip length. Bloom speed stays fixed to the scene's
-  // bloomDuration; Preview loops that exact export-length segment until exited.
-  const [playing, setPlaying] = useState(false);
-  const rafRef = useRef<number | null>(null);
+  // Export preview loops over the chosen clip length. Design preview is a
+  // separate one-shot scrubber over the flower's native bloom curve.
+  const exportPreviewRafRef = useRef<number | null>(null);
+  const designPreviewRafRef = useRef<number | null>(null);
   const durationRef = useRef(duration);
-  const previewTimeRef = useRef(0);
+  const exportPreviewTimeRef = useRef(0);
+  const designPreviewBloomRef = useRef(designPreviewBloom);
 
-  const setPreviewClock = (seconds: number) => {
+  const setExportPreviewClock = (seconds: number) => {
     const rounded = Math.round(seconds * 10) / 10;
-    if (rounded === previewTimeRef.current) return;
-    previewTimeRef.current = rounded;
-    setPreviewTime(rounded);
+    if (rounded === exportPreviewTimeRef.current) return;
+    exportPreviewTimeRef.current = rounded;
+    setExportPreviewTime(rounded);
   };
 
-  const previewStart = () => {
+  const setDesignPreviewProgress = (progress: number) => {
     const scene = sceneRef.current;
     if (!scene) return;
-    setPreviewClock(0);
-    scene.setBloom(scene.bloomAt(0));
+    const next = Math.min(Math.max(progress, 0), 1);
+    if (next !== designPreviewBloomRef.current) {
+      designPreviewBloomRef.current = next;
+      setDesignPreviewBloom(next);
+    }
+    scene.setBloom(scene.bloomAt(next * DESIGN_PREVIEW_COMPLETE_PROGRESS));
   };
 
   const editPose = () => {
     const scene = sceneRef.current;
     if (!scene) return;
     scene.setBloom(scene.bloomMax);
+    if (designPreviewBloomRef.current !== 1) {
+      designPreviewBloomRef.current = 1;
+      setDesignPreviewBloom(1);
+    }
   };
 
-  const stopPlay = () => {
-    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    rafRef.current = null;
-    setPlaying(false);
+  const stopExportPreview = () => {
+    if (exportPreviewRafRef.current !== null) {
+      cancelAnimationFrame(exportPreviewRafRef.current);
+    }
+    exportPreviewRafRef.current = null;
+    setExportPreviewPlaying(false);
   };
 
-  const exitPreview = () => {
-    stopPlay();
-    setPreviewClock(0);
+  const stopDesignPreview = () => {
+    if (designPreviewRafRef.current !== null) {
+      cancelAnimationFrame(designPreviewRafRef.current);
+    }
+    designPreviewRafRef.current = null;
+  };
+
+  const exitExportPreview = () => {
+    stopExportPreview();
+    setExportPreviewClock(0);
     editPose();
   };
 
-  const togglePlay = () => {
+  const toggleExportPreview = () => {
     const scene = sceneRef.current;
     if (!scene) return;
-    if (rafRef.current !== null) {
-      exitPreview();
+    if (exportPreviewRafRef.current !== null) {
+      exitExportPreview();
       return;
     }
-    previewStart();
-    setPlaying(true);
+    stopDesignPreview();
+    setExportPreviewClock(0);
+    scene.setBloom(scene.bloomAt(0));
+    setDesignPreviewBloom(0);
+    designPreviewBloomRef.current = 0;
+    setExportPreviewPlaying(true);
     const start = performance.now();
     const tick = () => {
       const elapsed = (performance.now() - start) / 1000;
       const clipDuration = Math.max(durationRef.current, 0.001);
       const t = elapsed % clipDuration;
-      setPreviewClock(t);
-      scene.setBloom(scene.bloomAt(t / scene.bloomDuration));
-      rafRef.current = requestAnimationFrame(tick);
+      const progress = Math.min(t / scene.bloomDuration, 1);
+      setExportPreviewClock(t);
+      scene.setBloom(scene.bloomAt(progress));
+      const previewProgress = Math.min(
+        progress / DESIGN_PREVIEW_COMPLETE_PROGRESS,
+        1,
+      );
+      const roundedProgress = Math.round(previewProgress * 100) / 100;
+      if (roundedProgress !== designPreviewBloomRef.current) {
+        designPreviewBloomRef.current = roundedProgress;
+        setDesignPreviewBloom(roundedProgress);
+      }
+      exportPreviewRafRef.current = requestAnimationFrame(tick);
     };
-    rafRef.current = requestAnimationFrame(tick);
+    exportPreviewRafRef.current = requestAnimationFrame(tick);
+  };
+
+  const handleDesignPreviewBloomChange = (progress: number) => {
+    stopExportPreview();
+    stopDesignPreview();
+    setDesignPreviewProgress(progress);
+  };
+
+  const playDesignPreview = () => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    stopExportPreview();
+    stopDesignPreview();
+    setExportPreviewClock(0);
+    setDesignPreviewProgress(0);
+    const start = performance.now();
+    const tick = () => {
+      const elapsed = (performance.now() - start) / 1000;
+      const previewDuration = scene.bloomDuration * DESIGN_PREVIEW_COMPLETE_PROGRESS;
+      const progress = Math.min(elapsed / previewDuration, 1);
+      scene.setBloom(
+        scene.bloomAt(progress * DESIGN_PREVIEW_COMPLETE_PROGRESS),
+      );
+      const roundedProgress = Math.round(progress * 100) / 100;
+      if (roundedProgress !== designPreviewBloomRef.current) {
+        designPreviewBloomRef.current = roundedProgress;
+        setDesignPreviewBloom(roundedProgress);
+      }
+      if (progress < 1) {
+        designPreviewRafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+      designPreviewRafRef.current = null;
+      setDesignPreviewProgress(1);
+    };
+    designPreviewRafRef.current = requestAnimationFrame(tick);
   };
 
   useEffect(() => {
@@ -380,7 +454,10 @@ export default function StudioCanvas() {
   }, [duration]);
 
   // Clean up any running preview loop on unmount.
-  useEffect(() => () => stopPlay(), []);
+  useEffect(() => () => {
+    stopExportPreview();
+    stopDesignPreview();
+  }, []);
 
   // Boot the scene once. Studio uses its Tweakpane design sheet instead of the
   // legacy lil-gui designer panel used by the story page.
@@ -582,7 +659,8 @@ export default function StudioCanvas() {
   async function runExport(kind: "image" | "video", job: () => Promise<void>) {
     const scene = sceneRef.current;
     if (!scene || exporting) return;
-    stopPlay();
+    stopExportPreview();
+    stopDesignPreview();
     setExporting(true);
     setExportKind(kind);
     setProgress(0);
@@ -641,6 +719,8 @@ export default function StudioCanvas() {
     if (!preset) return;
     setSelectedPreset(index);
     setPalette(preset.palette);
+    stopExportPreview();
+    stopDesignPreview();
     const scene = sceneRef.current;
     if (!scene) return;
     scene.applyPreset(preset.params);
@@ -650,7 +730,7 @@ export default function StudioCanvas() {
     scene.setResetBaseline(preset.params);
     // Re-assert the fully-open pose so the new flower shows bloomed, not
     // mid-wavefront (curl params shift what the current bloom value means).
-    scene.setBloom(scene.bloomMax);
+    editPose();
   }
 
   function handlePaletteChange(index: number, rgb: [number, number, number]) {
@@ -819,9 +899,7 @@ export default function StudioCanvas() {
               petalPreview={petalPreview}
               arrangementPreview={arrangementPreview}
               windPreview={windPreview}
-              duration={duration}
-              previewTime={previewTime}
-              playing={playing}
+              previewBloom={designPreviewBloom}
               exporting={exporting}
               onPresetChange={handlePresetChange}
               onPaletteChange={handlePaletteChange}
@@ -829,8 +907,8 @@ export default function StudioCanvas() {
               onPhyllotaxisChange={handlePhyllotaxisChange}
               onWindChange={handleWindChange}
               onRenderStyleChange={handleRenderStyleChange}
-              onDurationChange={handleDurationChange}
-              onTogglePlay={togglePlay}
+              onPreviewBloomChange={handleDesignPreviewBloomChange}
+              onPlayPreview={playDesignPreview}
               onResetAll={() => sceneRef.current?.resetAll()}
               onStemChange={handleStemChange}
               onResetPetalGeometry={handleResetPetalGeometry}
@@ -850,15 +928,15 @@ export default function StudioCanvas() {
               exporting={exporting}
               exportKind={exportKind}
               progress={progress}
-              previewTime={previewTime}
-              playing={playing}
+              previewTime={exportPreviewTime}
+              playing={exportPreviewPlaying}
               onBgModeChange={setBgMode}
               onColorChange={setColor}
               onImageResChange={setImageRes}
               onVideoResChange={setVideoRes}
               onDurationChange={handleDurationChange}
               onShowCameraFrameChange={setShowCameraFrame}
-              onTogglePlay={togglePlay}
+              onTogglePlay={toggleExportPreview}
               onExportImage={handleExportImage}
               onExportVideo={handleExportVideo}
             />
