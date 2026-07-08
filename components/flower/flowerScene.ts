@@ -6,6 +6,7 @@ import {
   petalWidthAt,
   type PetalProfilePoint,
 } from "./petalProfile";
+import { createPetalUvTopology } from "./petalMesh";
 
 const MAX_LAYOUT_PETALS = 150;
 const PETAL_PROFILE_POINT_COUNT = 5;
@@ -211,6 +212,11 @@ export function createFlowerScene(
       v: params[PETAL_PROFILE_V_KEYS[index]],
       width: params[PETAL_PROFILE_W_KEYS[index]],
     }));
+  const petalProfileWidths = () =>
+    Array.from(
+      { length: PETAL_PROFILE_POINT_COUNT },
+      (_, index) => params[PETAL_PROFILE_W_KEYS[index]],
+    );
 
   function bakeRamps() {
     const { stemWidth, stemEnd, curlBias } = params;
@@ -401,8 +407,9 @@ float openness(float s, float bloomLocal) {
 }
 
 vec3 petalPos(vec2 uvIn, float bloomLocal, float seed) {
-  float u = uvIn.x * 2.0 - 1.0;
-  float v = uvIn.y;
+  vec2 uvSafe = clamp(uvIn, vec2(0.0), vec2(1.0));
+  float u = uvSafe.x * 2.0 - 1.0;
+  float v = uvSafe.y;
   const int N = 24;
   float ds = v / float(N);
   float ang = 0.0;
@@ -419,11 +426,12 @@ vec3 petalPos(vec2 uvIn, float bloomLocal, float seed) {
   float wrap = 1.0 - bloomLocal;
   float width = texture2D(uRamps, vec2(v, 0.5)).r * (1.0 + uAsym * u * relax)
     * (1.0 + uWrapWidth * wrap);
+  float detailFade = smoothstep(0.0, 0.035, width);
   float x = u * width;
   float zl = -uCup * (1.0 + uWrapCup * wrap) * (1.0 - u * u) * width;
-  zl += uWaveAmp * relax * u * u * sin(v * uWaveFreq + seed * 17.0 + u * 2.3 + seed);
-  zl += 0.01 * relax * sin(seed * 7.0 + v * 5.0) * v;
-  zl += uNoiseAmp * v * bloomLocal
+  zl += detailFade * uWaveAmp * relax * u * u * sin(v * uWaveFreq + seed * 17.0 + u * 2.3 + seed);
+  zl += detailFade * 0.01 * relax * sin(seed * 7.0 + v * 5.0) * v;
+  zl += detailFade * uNoiseAmp * v * bloomLocal
     * (turb(vec3(u * 2.0 + seed, v * uNoiseFreq, seed * 3.7 + uTime * uWindSpeed * 0.15)) - 0.5) * 2.0;
   float sa = uSideCurl * x * relax;
   vec2 xz = mat2(cos(sa), -sin(sa), sin(sa), cos(sa)) * vec2(x, zl);
@@ -440,9 +448,13 @@ void main() {
   float bloomLocal = 1.0 - mask;
 
   vec3 pos = petalPos(uv, bloomLocal, aSeed);
-  vec3 pu = petalPos(uv + vec2(0.004, 0.0), bloomLocal, aSeed);
-  vec3 pv = petalPos(uv + vec2(0.0, 0.004), bloomLocal, aSeed);
-  vec3 nrm = normalize(cross(pu - pos, pv - pos));
+  float du = uv.x > 0.996 ? -0.004 : 0.004;
+  float dv = uv.y > 0.996 ? -0.004 : 0.004;
+  vec3 pu = petalPos(uv + vec2(du, 0.0), bloomLocal, aSeed);
+  vec3 pv = petalPos(uv + vec2(0.0, dv), bloomLocal, aSeed);
+  vec3 tu = du > 0.0 ? pu - pos : pos - pu;
+  vec3 tv = dv > 0.0 ? pv - pos : pos - pv;
+  vec3 nrm = normalize(cross(tu, tv));
   float shell = 1.0 + uShellGap * aU * (1.0 - bloomLocal);
   pos *= shell;
   float ta = -aTilt * bloomLocal;
@@ -570,6 +582,20 @@ void main() {
 
   let flower: THREE.InstancedMesh | null = null;
   const dummy = new THREE.Object3D();
+  function createPetalGeometry() {
+    const topology = createPetalUvTopology(24, 64);
+    const geo = new THREE.BufferGeometry();
+    geo.setIndex(topology.indices);
+    geo.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(
+        new Float32Array((topology.uvs.length / 2) * 3),
+        3,
+      ),
+    );
+    geo.setAttribute("uv", new THREE.Float32BufferAttribute(topology.uvs, 2));
+    return geo;
+  }
   function concentricSpot(index: number, total: number) {
     let placed = 0;
     for (let ring = 0; placed < total; ring++) {
@@ -597,8 +623,7 @@ void main() {
       flower.geometry.dispose();
     }
     const n = params.numPetals;
-    const geo = new THREE.PlaneGeometry(1, 1, 24, 64);
-    geo.deleteAttribute("normal");
+    const geo = createPetalGeometry();
     const aU = new Float32Array(n),
       aSeed = new Float32Array(n),
       aTilt = new Float32Array(n);
@@ -904,9 +929,14 @@ void main() {
 
     const fPetal = gui.addFolder("Petal Geometry");
 
-    // 3D Form: how that flat petal curls and bends in space.
-    const fTransform = fPetal.addFolder("3D Form");
+    // Surface: how that flat petal length, curls, and bends in space.
+    const fTransform = fPetal.addFolder("Surface");
     petalGeometryCtrls = [
+      fTransform
+        .add(params, "petalLen", 0.3, 1.5)
+        .name("Petal Length")
+        .onChange((v: number) => setPetalOutlineParams(v, petalProfileWidths()))
+        .decimals(2),
       fTransform.add(params, "curlOpen", -1.5, 1).name("Lengthwise Curl").onChange(shapeU("uCurlOpen")).decimals(1),
       fTransform.add(params, "curlBias", 0.3, 4).name("Curl Focus").onChange(shapeBake).decimals(1),
       fTransform.add(params, "cup", 0, 1.5).name("Cup Depth").onChange(shapeU("uCup")).decimals(1),
@@ -1253,6 +1283,10 @@ void main() {
     /** Complete flat petal outline — driven by the Studio outline editor. */
     setPetalOutline(petalLen: number, widths: number[], positions: number[]) {
       setPetalOutlineParams(petalLen, widths, positions);
+    },
+    /** Petal length — kept outside the outline canvas to avoid tip-handle overlap. */
+    setPetalLength(petalLen: number) {
+      setPetalOutlineParams(petalLen, petalProfileWidths());
     },
     /** Bloom wavefront width — driven by the /demo "Bloom dial" card. */
     setTransition(v: number) {

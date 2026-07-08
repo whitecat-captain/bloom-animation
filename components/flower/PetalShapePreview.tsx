@@ -6,6 +6,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { startVisibilityGatedLoop } from "./visibilityLoop";
 import type { PetalShapeState } from "./flowerScene";
 import { petalWidthAt } from "./petalProfile";
+import { createPetalUvTopology } from "./petalMesh";
 
 const STEM_WIDTH = 0.03;
 const STEM_END = 0.04;
@@ -74,10 +75,11 @@ function petalPoint(
   spine.multiplyScalar(shape.petalLen);
 
   const width = widthAt(shape, v) * (1 + shape.asym * u);
+  const detailFade = Math.min(Math.max(width / 0.035, 0), 1);
   const x = u * width;
   let zLocal = -shape.cup * (1 - u * u) * width;
   zLocal +=
-    shape.waveAmp * u * u * Math.sin(v * 11 + u * 2.3);
+    detailFade * shape.waveAmp * u * u * Math.sin(v * 11 + u * 2.3);
 
   const sideAngle = shape.sideCurl * x;
   const cos = Math.cos(sideAngle);
@@ -96,10 +98,10 @@ function petalPoint(
 function makePetalPreviewGeometry(shape: PetalShapeState, palette: PaletteStops) {
   const xSegments = 28;
   const ySegments = 72;
+  const topology = createPetalUvTopology(xSegments, ySegments);
   const positions: number[] = [];
   const uvs: number[] = [];
   const colors: number[] = [];
-  const indices: number[] = [];
   const guidePositions: number[] = [];
   const addGuide = (points: THREE.Vector3[]) => {
     for (let i = 1; i < points.length; i++) {
@@ -109,27 +111,14 @@ function makePetalPreviewGeometry(shape: PetalShapeState, palette: PaletteStops)
     }
   };
 
-  for (let y = 0; y <= ySegments; y++) {
-    const v = y / ySegments;
-    for (let x = 0; x <= xSegments; x++) {
-      const u = x / xSegments;
-      const p = petalPoint(shape, u, v);
-      const color = previewColorAt(palette, v);
-      positions.push(p.x, p.y, p.z);
-      uvs.push(u, v);
-      colors.push(color[0], color[1], color[2]);
-    }
-  }
-
-  const row = xSegments + 1;
-  for (let y = 0; y < ySegments; y++) {
-    for (let x = 0; x < xSegments; x++) {
-      const a = y * row + x;
-      const b = a + 1;
-      const c = a + row;
-      const d = c + 1;
-      indices.push(a, c, b, b, c, d);
-    }
+  for (let i = 0; i < topology.uvs.length; i += 2) {
+    const u = topology.uvs[i];
+    const v = topology.uvs[i + 1];
+    const p = petalPoint(shape, u, v);
+    const color = previewColorAt(palette, v);
+    positions.push(p.x, p.y, p.z);
+    uvs.push(u, v);
+    colors.push(color[0], color[1], color[2]);
   }
   addGuide(
     Array.from({ length: 38 }, (_, i) =>
@@ -145,7 +134,7 @@ function makePetalPreviewGeometry(shape: PetalShapeState, palette: PaletteStops)
   });
 
   const surface = new THREE.BufferGeometry();
-  surface.setIndex(indices);
+  surface.setIndex(topology.indices);
   surface.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
   surface.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
   surface.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));

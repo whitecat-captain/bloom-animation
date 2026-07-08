@@ -11,6 +11,7 @@ import {
 import type { FlowerDesignState, PetalShapeState } from "./flowerScene";
 
 type PetalFormKey =
+  | "petalLen"
   | "curlOpen"
   | "curlBias"
   | "cup"
@@ -198,6 +199,7 @@ export default function StudioDesignPane({
   const paramsRef = useRef<DesignPaneParams>({
     preset: selectedPreset,
     previewBloom: previewBloom * 100,
+    petalLen: shape.petalLen,
     curlOpen: shape.curlOpen,
     curlBias: shape.curlBias,
     cup: shape.cup,
@@ -320,7 +322,7 @@ export default function StudioDesignPane({
       expanded: true,
     });
     const form = petalGeometry.addFolder({
-      title: "3D Form",
+      title: "Surface",
       expanded: true,
     });
     const resetPetalGeometryButton = petalGeometry.addButton({
@@ -358,6 +360,10 @@ export default function StudioDesignPane({
       return binding;
     };
 
+    const petalLen = bindNumber(form, "petalLen", "Petal Length", 0.3, 1.5, 0.01, 2);
+    petalLen.on("change", (event) => {
+      callbacksRef.current.onPetalFormChange("petalLen", event.value);
+    });
     const curlOpen = bindNumber(form, "curlOpen", "Lengthwise Curl", -1.5, 1, 0.1);
     curlOpen.on("change", (event) => {
       callbacksRef.current.onPetalFormChange("curlOpen", event.value);
@@ -621,6 +627,7 @@ export default function StudioDesignPane({
       preset,
       colors: colorBindings,
       flat,
+      petalLen,
       curlOpen,
       curlBias,
       cup,
@@ -694,6 +701,7 @@ export default function StudioDesignPane({
     const next: DesignPaneParams = {
       preset: selectedPreset,
       previewBloom: previewBloom * 100,
+      petalLen: shape.petalLen,
       curlOpen: shape.curlOpen,
       curlBias: shape.curlBias,
       cup: shape.cup,

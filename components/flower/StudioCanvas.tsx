@@ -137,7 +137,7 @@ const AURORA_ROSE_PARAMS: FlowerPresetParams = {
   curlOpen: -0.35,
   curlBias: 2.3,
   propagation: 1.2,
-  v0: 0.2,
+  v0: 0.16,
   w0: 0.16,
   v1: 0.4,
   w1: 0.28,
@@ -619,6 +619,9 @@ export default function StudioCanvas() {
     if (!scene) return;
 
     switch (key) {
+      case "petalLen":
+        scene.setPetalLength(value);
+        break;
       case "curlOpen":
         scene.setCurlOpen(value);
         break;
