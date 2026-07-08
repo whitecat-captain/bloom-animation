@@ -1,17 +1,31 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import GUI from "lil-gui";
+import {
+  PETAL_PROFILE_TIP_CONTROL_MAX,
+  petalWidthAt,
+  type PetalProfilePoint,
+} from "./petalProfile";
 
 const MAX_LAYOUT_PETALS = 150;
+const PETAL_PROFILE_POINT_COUNT = 5;
+const PETAL_PROFILE_V_KEYS = ["v0", "v1", "v2", "v3", "v4"] as const;
+const PETAL_PROFILE_W_KEYS = ["w0", "w1", "w2", "w3", "w4"] as const;
 const DEFAULT_PETAL_GEOMETRY = {
   petalLen: 0.95,
   curlClosed: 1.7,
   curlOpen: -0.35,
   curlBias: 2.3,
+  v0: 0.2,
   w0: 0.16,
+  v1: 0.4,
   w1: 0.28,
+  v2: 0.62,
   w2: 0.3,
+  v3: 0.82,
   w3: 0.2,
+  v4: PETAL_PROFILE_TIP_CONTROL_MAX,
+  w4: 0.002,
   cup: 0.4,
   sideCurl: 0.45,
   waveAmp: 0.035,
@@ -26,10 +40,16 @@ const PETAL_GEOMETRY_KEYS = Object.keys(
 
 export type PetalShapeState = {
   petalLen: number;
+  v0: number;
   w0: number;
+  v1: number;
   w1: number;
+  v2: number;
   w2: number;
+  v3: number;
   w3: number;
+  v4: number;
+  w4: number;
   curlOpen: number;
   curlBias: number;
   cup: number;
@@ -137,10 +157,16 @@ export function createFlowerScene(
     propagation: 1.2,
     stemWidth: 0.03,
     stemEnd: 0.04,
+    v0: 0.2,
     w0: 0.16,
+    v1: 0.4,
     w1: 0.28,
+    v2: 0.62,
     w2: 0.3,
+    v3: 0.82,
     w3: 0.2,
+    v4: PETAL_PROFILE_TIP_CONTROL_MAX,
+    w4: 0.002,
     cup: 0.4,
     sideCurl: 0.45,
     waveAmp: 0.035,
@@ -180,33 +206,26 @@ export function createFlowerScene(
   );
   rampTex.minFilter = rampTex.magFilter = THREE.LinearFilter;
 
-  function catmullRom(pts: number[], t: number) {
-    const n = pts.length - 1;
-    const f = Math.min(t * n, n - 1e-6);
-    const i = Math.floor(f),
-      s = f - i;
-    const p0 = pts[Math.max(i - 1, 0)],
-      p1 = pts[i],
-      p2 = pts[i + 1],
-      p3 = pts[Math.min(i + 2, n)];
-    return (
-      0.5 *
-      (2 * p1 +
-        (-p0 + p2) * s +
-        (2 * p0 - 5 * p1 + 4 * p2 - p3) * s * s +
-        (-p0 + 3 * p1 - 3 * p2 + p3) * s * s * s)
-    );
-  }
+  const petalProfilePoints = (): PetalProfilePoint[] =>
+    Array.from({ length: PETAL_PROFILE_POINT_COUNT }, (_, index) => ({
+      v: params[PETAL_PROFILE_V_KEYS[index]],
+      width: params[PETAL_PROFILE_W_KEYS[index]],
+    }));
+
   function bakeRamps() {
-    const { stemWidth, stemEnd, w0, w1, w2, w3, curlBias } = params;
-    const widthPts = [stemWidth, w0, w1, w2, w3, 0.002];
+    const { stemWidth, stemEnd, curlBias } = params;
+    const points = petalProfilePoints();
     const half = THREE.DataUtils.toHalfFloat;
     for (let i = 0; i < RAMP_RES; i++) {
       const v = i / (RAMP_RES - 1);
-      const width =
-        v < stemEnd
-          ? stemWidth
-          : Math.max(catmullRom(widthPts, (v - stemEnd) / (1 - stemEnd)), 0.002);
+      const width = petalWidthAt(
+        {
+          stemWidth,
+          stemEnd,
+          points,
+        },
+        v,
+      );
       rampData[i * 4] = half(width);
       rampData[i * 4 + 1] = half(
         curlBias * Math.pow(Math.max(v, 1e-4), curlBias - 1),
@@ -218,10 +237,16 @@ export function createFlowerScene(
 
   const petalShapeState = (): PetalShapeState => ({
     petalLen: params.petalLen,
+    v0: params.v0,
     w0: params.w0,
+    v1: params.v1,
     w1: params.w1,
+    v2: params.v2,
     w2: params.w2,
+    v3: params.v3,
     w3: params.w3,
+    v4: params.v4,
+    w4: params.w4,
     curlOpen: params.curlOpen,
     curlBias: params.curlBias,
     cup: params.cup,
@@ -741,13 +766,33 @@ void main() {
 
   function setPetalOutlineParams(
     petalLen: number,
-    [w0, w1, w2, w3]: number[],
+    widths: number[],
+    positions?: number[],
   ) {
     params.petalLen = THREE.MathUtils.clamp(petalLen, 0.3, 1.5);
-    params.w0 = THREE.MathUtils.clamp(w0, 0, 0.6);
-    params.w1 = THREE.MathUtils.clamp(w1, 0, 0.6);
-    params.w2 = THREE.MathUtils.clamp(w2, 0, 0.6);
-    params.w3 = THREE.MathUtils.clamp(w3, 0, 0.6);
+    const gap = 0.02;
+    for (let index = 0; index < PETAL_PROFILE_POINT_COUNT; index++) {
+      const widthKey = PETAL_PROFILE_W_KEYS[index];
+      const positionKey = PETAL_PROFILE_V_KEYS[index];
+      params[widthKey] = THREE.MathUtils.clamp(
+        widths[index] ?? params[widthKey],
+        0,
+        0.6,
+      );
+      if (positions) {
+        const min = index === 0
+          ? params.stemEnd + gap
+          : params[PETAL_PROFILE_V_KEYS[index - 1]] + gap;
+        const max = index === PETAL_PROFILE_POINT_COUNT - 1
+          ? PETAL_PROFILE_TIP_CONTROL_MAX
+          : params[PETAL_PROFILE_V_KEYS[index + 1]] - gap;
+        params[positionKey] = THREE.MathUtils.clamp(
+          positions[index] ?? params[positionKey],
+          min,
+          max,
+        );
+      }
+    }
     uniforms.uLength.value = params.petalLen;
     bakeRamps();
     petalGeometryCtrls.forEach((ctrl) => ctrl.updateDisplay());
@@ -1206,8 +1251,8 @@ void main() {
       setPetalOutlineParams(params.petalLen, widths);
     },
     /** Complete flat petal outline — driven by the Studio outline editor. */
-    setPetalOutline(petalLen: number, widths: number[]) {
-      setPetalOutlineParams(petalLen, widths);
+    setPetalOutline(petalLen: number, widths: number[], positions: number[]) {
+      setPetalOutlineParams(petalLen, widths, positions);
     },
     /** Bloom wavefront width — driven by the /demo "Bloom dial" card. */
     setTransition(v: number) {

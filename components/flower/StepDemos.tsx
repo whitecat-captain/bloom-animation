@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
+import { PETAL_PROFILE_TIP_CONTROL_MAX, petalWidthAt } from "./petalProfile";
 
 /**
  * Optional linkage to the live 3D flower (the /demo showcase). A demo fires
@@ -65,25 +66,6 @@ function tracePetal(ctx: CanvasRenderingContext2D, L: number) {
   ctx.moveTo(0, 0);
   ctx.bezierCurveTo(L * 0.32, -L * 0.25, L * 0.34, -L * 0.62, 0, -L);
   ctx.bezierCurveTo(-L * 0.34, -L * 0.62, -L * 0.32, -L * 0.25, 0, 0);
-}
-
-/* ===== math ported from flowerScene.ts so demos stay faithful ===== */
-function catmullRom(pts: number[], t: number) {
-  const n = pts.length - 1;
-  const f = Math.min(t * n, n - 1e-6);
-  const i = Math.floor(f),
-    s = f - i;
-  const p0 = pts[Math.max(i - 1, 0)],
-    p1 = pts[i],
-    p2 = pts[i + 1],
-    p3 = pts[Math.min(i + 2, n)];
-  return (
-    0.5 *
-    (2 * p1 +
-      (-p0 + p2) * s +
-      (2 * p0 - 5 * p1 + 4 * p2 - p3) * s * s +
-      (-p0 + 3 * p1 - 3 * p2 + p3) * s * s * s)
-  );
 }
 
 /** openness(s) from the vertex shader: base opens first, tip follows */
@@ -378,10 +360,10 @@ export function PhyllotaxisDemo({ active, onSync }: DemoSyncProps = {}) {
 const PETAL_BIAS = 2.3; // curvature concentrates toward the tip
 const PETAL_STEM_END = 0.04;
 const PETAL_STEM_W = 0.03;
-const PETAL_TIP_W = 0.002;
-const W_MIN = 0.02;
+const W_MIN = 0;
 const W_MAX = 0.42;
-const DEF_WIDTHS = [0.16, 0.28, 0.3, 0.2];
+const DEF_PROFILE_VS = [0.2, 0.4, 0.62, 0.82, PETAL_PROFILE_TIP_CONTROL_MAX];
+const DEF_WIDTHS = [0.16, 0.28, 0.3, 0.2, 0.002];
 // Keep the curl in the "gently cupped petal" range — past ~2 the tip rolls
 // over into a comma/hook and stops reading as a petal.
 const DEF_CURL = 1.1;
@@ -391,13 +373,18 @@ type PetalHandle = { x: number; y: number; k: number };
 type PetalLayout = { leftCx: number; wscale: number };
 type Pt = [number, number];
 
-/** half-width of the silhouette at length v∈[0,1] from the 4 control widths */
+/** half-width of the silhouette at length v∈[0,1] from editable profile widths */
 function petalHalfWidth(v: number, widths: number[]) {
-  if (v < PETAL_STEM_END) return PETAL_STEM_W;
-  const pts = [PETAL_STEM_W, ...widths, PETAL_TIP_W];
-  return Math.max(
-    catmullRom(pts, (v - PETAL_STEM_END) / (1 - PETAL_STEM_END)),
-    0.002,
+  return petalWidthAt(
+    {
+      stemWidth: PETAL_STEM_W,
+      stemEnd: PETAL_STEM_END,
+      points: widths.map((width, index) => ({
+        v: DEF_PROFILE_VS[index] ?? 1,
+        width,
+      })),
+    },
+    v,
   );
 }
 
@@ -514,10 +501,10 @@ function drawPetalLab(
   ctx.fillStyle = "#ffb16e";
   ctx.fill();
 
-  // draggable width control points (w0..w3)
+  // draggable width control points (w0..w4)
   const handles: PetalHandle[] = [];
   for (let k = 0; k < widths.length; k++) {
-    const v = PETAL_STEM_END + ((k + 1) / 5) * (1 - PETAL_STEM_END);
+    const v = DEF_PROFILE_VS[k] ?? 1;
     const hx = leftCx + widths[k] * wscale,
       hy = bottom - v * Lpx;
     handles.push({ x: hx, y: hy, k });

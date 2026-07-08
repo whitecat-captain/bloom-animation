@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { startVisibilityGatedLoop } from "./visibilityLoop";
 import type { PetalShapeState } from "./flowerScene";
+import { petalWidthAt } from "./petalProfile";
 
 const STEM_WIDTH = 0.03;
 const STEM_END = 0.04;
@@ -12,28 +13,21 @@ const DEFAULT_CAMERA_POSITION = new THREE.Vector3(0.76, 0.55, 1.9);
 const DEFAULT_CONTROLS_TARGET = new THREE.Vector3(0, 0, 0);
 type PaletteStops = [number, number, number][];
 
-function catmullRom(pts: number[], t: number) {
-  const n = pts.length - 1;
-  const f = Math.min(t * n, n - 1e-6);
-  const i = Math.floor(f);
-  const s = f - i;
-  const p0 = pts[Math.max(i - 1, 0)];
-  const p1 = pts[i];
-  const p2 = pts[i + 1];
-  const p3 = pts[Math.min(i + 2, n)];
-  return (
-    0.5 *
-    (2 * p1 +
-      (-p0 + p2) * s +
-      (2 * p0 - 5 * p1 + 4 * p2 - p3) * s * s +
-      (-p0 + 3 * p1 - 3 * p2 + p3) * s * s * s)
-  );
-}
-
 function widthAt(shape: PetalShapeState, v: number) {
-  const widthPts = [STEM_WIDTH, shape.w0, shape.w1, shape.w2, shape.w3, 0.002];
-  if (v < STEM_END) return STEM_WIDTH;
-  return Math.max(catmullRom(widthPts, (v - STEM_END) / (1 - STEM_END)), 0.002);
+  return petalWidthAt(
+    {
+      stemWidth: STEM_WIDTH,
+      stemEnd: STEM_END,
+      points: [
+        { v: shape.v0, width: shape.w0 },
+        { v: shape.v1, width: shape.w1 },
+        { v: shape.v2, width: shape.w2 },
+        { v: shape.v3, width: shape.w3 },
+        { v: shape.v4, width: shape.w4 },
+      ],
+    },
+    v,
+  );
 }
 
 function mixStop(
