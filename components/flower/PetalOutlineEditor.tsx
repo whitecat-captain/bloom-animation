@@ -8,25 +8,16 @@ import {
 } from "react";
 import type { PetalShapeState } from "./flowerScene";
 import {
-  PETAL_PROFILE_TIP_CONTROL_MAX,
+  petalProfilePointsFromWidths,
   petalWidthAt,
-  type PetalProfilePoint,
 } from "./petalProfile";
 
 type PaletteStops = [number, number, number][];
-type ProfileTuple = [
-  PetalProfilePoint,
-  PetalProfilePoint,
-  PetalProfilePoint,
-  PetalProfilePoint,
-  PetalProfilePoint,
-];
 type OutlineChange = {
   petalLen: number;
   widths: [number, number, number, number, number];
-  positions: [number, number, number, number, number];
 };
-type PetalDrag = { kind: "point"; index: number };
+type PetalDrag = { kind: "width"; index: number };
 type PetalHandle = { x: number; y: number; drag: PetalDrag };
 type PetalLayout = {
   bottom: number;
@@ -42,7 +33,6 @@ const WIDTH_MAX = 0.6;
 const LENGTH_MIN = 0.3;
 const LENGTH_MAX = 1.5;
 const LENGTH_MIN_DRAW_RATIO = 0.46;
-const POINT_MIN_GAP = 0.025;
 const HIT_RADIUS = 18;
 
 function clamp(n: number, min: number, max: number) {
@@ -77,41 +67,26 @@ function rgba(stop: [number, number, number], alpha: number) {
   return `rgba(${Math.round(stop[0] * 255)}, ${Math.round(stop[1] * 255)}, ${Math.round(stop[2] * 255)}, ${alpha})`;
 }
 
-function profilePoints(shape: PetalShapeState): ProfileTuple {
-  return [
-    { v: shape.v0, width: shape.w0 },
-    { v: shape.v1, width: shape.w1 },
-    { v: shape.v2, width: shape.w2 },
-    { v: shape.v3, width: shape.w3 },
-    { v: shape.v4, width: shape.w4 },
-  ];
-}
-
 function widthTuple(shape: PetalShapeState): OutlineChange["widths"] {
   return [shape.w0, shape.w1, shape.w2, shape.w3, shape.w4];
 }
 
-function positionTuple(shape: PetalShapeState): OutlineChange["positions"] {
-  return [shape.v0, shape.v1, shape.v2, shape.v3, shape.v4];
-}
-
-function shapeWithProfile(
+function shapeWithWidths(
   shape: PetalShapeState,
-  points: ProfileTuple,
+  widths: OutlineChange["widths"],
 ): PetalShapeState {
   return {
     ...shape,
-    v0: points[0].v,
-    w0: points[0].width,
-    v1: points[1].v,
-    w1: points[1].width,
-    v2: points[2].v,
-    w2: points[2].width,
-    v3: points[3].v,
-    w3: points[3].width,
-    v4: points[4].v,
-    w4: points[4].width,
+    w0: widths[0],
+    w1: widths[1],
+    w2: widths[2],
+    w3: widths[3],
+    w4: widths[4],
   };
+}
+
+function profilePoints(shape: PetalShapeState) {
+  return petalProfilePointsFromWidths(widthTuple(shape));
 }
 
 function lengthToDrawRatio(petalLen: number) {
@@ -190,7 +165,7 @@ function drawOutline(
     const { v, width } = points[index];
     const x = centerX + width * widthScale;
     const y = bottom - v * lengthPx;
-    handles.push({ x, y, drag: { kind: "point", index } });
+    handles.push({ x, y, drag: { kind: "width", index } });
 
     ctx.beginPath();
     ctx.moveTo(centerX, y);
@@ -198,7 +173,7 @@ function drawOutline(
     ctx.strokeStyle = "rgba(255, 255, 255, 0.18)";
     ctx.stroke();
 
-    const active = activeDrag?.kind === "point" && activeDrag.index === index;
+    const active = activeDrag?.kind === "width" && activeDrag.index === index;
     ctx.beginPath();
     ctx.arc(x, y, active ? 6 : 4.5, 0, Math.PI * 2);
     ctx.fillStyle = active ? "rgba(255, 255, 255, 0.95)" : rgba(handleColor, 0.96);
@@ -289,7 +264,6 @@ export default function PetalOutlineEditor({
     onOutlineChangeRef.current({
       petalLen: nextShape.petalLen,
       widths: widthTuple(nextShape),
-      positions: positionTuple(nextShape),
     });
   };
 
@@ -320,7 +294,7 @@ export default function PetalOutlineEditor({
 
   const cursorForDrag = (drag: PetalDrag | null) => {
     if (!drag) return "default";
-    return "move";
+    return "ew-resize";
   };
 
   const updateCursor = (event: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -365,29 +339,18 @@ export default function PetalOutlineEditor({
     event.preventDefault();
     const rect = canvas.getBoundingClientRect();
     const localX = event.clientX - rect.left;
-    const localY = event.clientY - rect.top;
-    const { bottom, centerX, lengthPx, widthScale } = layoutRef.current;
+    const { centerX, widthScale } = layoutRef.current;
 
     const nextWidth = clamp(
       (localX - centerX) / widthScale,
       WIDTH_MIN,
       WIDTH_MAX,
     );
-    const nextPoints = profilePoints(shapeRef.current);
+    const nextWidths = widthTuple(shapeRef.current);
     const index = drag.index;
-    const lower = index === 0
-      ? STEM_END + POINT_MIN_GAP
-      : nextPoints[index - 1].v + POINT_MIN_GAP;
-    const upper = index === nextPoints.length - 1
-      ? PETAL_PROFILE_TIP_CONTROL_MAX
-      : nextPoints[index + 1].v - POINT_MIN_GAP;
-    const nextV = clamp((bottom - localY) / lengthPx, lower, upper);
-    if (
-      Math.abs(nextPoints[index].width - nextWidth) < 0.001 &&
-      Math.abs(nextPoints[index].v - nextV) < 0.001
-    ) return;
-    nextPoints[index] = { v: nextV, width: nextWidth };
-    emitOutlineChange(shapeWithProfile(shapeRef.current, nextPoints));
+    if (Math.abs(nextWidths[index] - nextWidth) < 0.001) return;
+    nextWidths[index] = nextWidth;
+    emitOutlineChange(shapeWithWidths(shapeRef.current, nextWidths));
     draw();
   };
 

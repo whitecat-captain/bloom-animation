@@ -4,7 +4,7 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
-import { PETAL_PROFILE_TIP_CONTROL_MAX, petalWidthAt } from "./petalProfile";
+import { petalProfilePointsFromWidths, petalWidthAt } from "./petalProfile";
 import { createPetalUvTopology } from "./petalMesh";
 
 /**
@@ -33,15 +33,10 @@ export function createDreamyScene(container: HTMLElement) {
     propagation: 1.2,
     stemWidth: 0.03,
     stemEnd: 0.04,
-    v0: 0.2,
     w0: 0.16,
-    v1: 0.4,
     w1: 0.28,
-    v2: 0.62,
     w2: 0.3,
-    v3: 0.82,
     w3: 0.2,
-    v4: PETAL_PROFILE_TIP_CONTROL_MAX,
     w4: 0.002,
     cup: 0.4,
     sideCurl: 0.45,
@@ -71,13 +66,13 @@ export function createDreamyScene(container: HTMLElement) {
 
   {
     const { stemWidth, stemEnd, curlBias } = params;
-    const points = [
-      { v: params.v0, width: params.w0 },
-      { v: params.v1, width: params.w1 },
-      { v: params.v2, width: params.w2 },
-      { v: params.v3, width: params.w3 },
-      { v: params.v4, width: params.w4 },
-    ];
+    const points = petalProfilePointsFromWidths([
+      params.w0,
+      params.w1,
+      params.w2,
+      params.w3,
+      params.w4,
+    ]);
     const half = THREE.DataUtils.toHalfFloat;
     for (let i = 0; i < RAMP_RES; i++) {
       const v = i / (RAMP_RES - 1);

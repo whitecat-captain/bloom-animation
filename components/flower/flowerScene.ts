@@ -2,30 +2,23 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import GUI from "lil-gui";
 import {
-  PETAL_PROFILE_TIP_CONTROL_MAX,
+  petalProfilePointsFromWidths,
   petalWidthAt,
-  type PetalProfilePoint,
 } from "./petalProfile";
 import { createPetalUvTopology } from "./petalMesh";
 
 const MAX_LAYOUT_PETALS = 150;
 const PETAL_PROFILE_POINT_COUNT = 5;
-const PETAL_PROFILE_V_KEYS = ["v0", "v1", "v2", "v3", "v4"] as const;
 const PETAL_PROFILE_W_KEYS = ["w0", "w1", "w2", "w3", "w4"] as const;
 const DEFAULT_PETAL_GEOMETRY = {
   petalLen: 0.95,
   curlClosed: 1.7,
   curlOpen: -0.35,
   curlBias: 2.3,
-  v0: 0.2,
   w0: 0.16,
-  v1: 0.4,
   w1: 0.28,
-  v2: 0.62,
   w2: 0.3,
-  v3: 0.82,
   w3: 0.2,
-  v4: PETAL_PROFILE_TIP_CONTROL_MAX,
   w4: 0.002,
   cup: 0.4,
   sideCurl: 0.45,
@@ -41,15 +34,10 @@ const PETAL_GEOMETRY_KEYS = Object.keys(
 
 export type PetalShapeState = {
   petalLen: number;
-  v0: number;
   w0: number;
-  v1: number;
   w1: number;
-  v2: number;
   w2: number;
-  v3: number;
   w3: number;
-  v4: number;
   w4: number;
   curlOpen: number;
   curlBias: number;
@@ -158,15 +146,10 @@ export function createFlowerScene(
     propagation: 1.2,
     stemWidth: 0.03,
     stemEnd: 0.04,
-    v0: 0.2,
     w0: 0.16,
-    v1: 0.4,
     w1: 0.28,
-    v2: 0.62,
     w2: 0.3,
-    v3: 0.82,
     w3: 0.2,
-    v4: PETAL_PROFILE_TIP_CONTROL_MAX,
     w4: 0.002,
     cup: 0.4,
     sideCurl: 0.45,
@@ -207,11 +190,6 @@ export function createFlowerScene(
   );
   rampTex.minFilter = rampTex.magFilter = THREE.LinearFilter;
 
-  const petalProfilePoints = (): PetalProfilePoint[] =>
-    Array.from({ length: PETAL_PROFILE_POINT_COUNT }, (_, index) => ({
-      v: params[PETAL_PROFILE_V_KEYS[index]],
-      width: params[PETAL_PROFILE_W_KEYS[index]],
-    }));
   const petalProfileWidths = () =>
     Array.from(
       { length: PETAL_PROFILE_POINT_COUNT },
@@ -220,7 +198,7 @@ export function createFlowerScene(
 
   function bakeRamps() {
     const { stemWidth, stemEnd, curlBias } = params;
-    const points = petalProfilePoints();
+    const points = petalProfilePointsFromWidths(petalProfileWidths());
     const half = THREE.DataUtils.toHalfFloat;
     for (let i = 0; i < RAMP_RES; i++) {
       const v = i / (RAMP_RES - 1);
@@ -243,15 +221,10 @@ export function createFlowerScene(
 
   const petalShapeState = (): PetalShapeState => ({
     petalLen: params.petalLen,
-    v0: params.v0,
     w0: params.w0,
-    v1: params.v1,
     w1: params.w1,
-    v2: params.v2,
     w2: params.w2,
-    v3: params.v3,
     w3: params.w3,
-    v4: params.v4,
     w4: params.w4,
     curlOpen: params.curlOpen,
     curlBias: params.curlBias,
@@ -802,31 +775,15 @@ void main() {
   function setPetalOutlineParams(
     petalLen: number,
     widths: number[],
-    positions?: number[],
   ) {
     params.petalLen = THREE.MathUtils.clamp(petalLen, 0.3, 1.5);
-    const gap = 0.02;
     for (let index = 0; index < PETAL_PROFILE_POINT_COUNT; index++) {
       const widthKey = PETAL_PROFILE_W_KEYS[index];
-      const positionKey = PETAL_PROFILE_V_KEYS[index];
       params[widthKey] = THREE.MathUtils.clamp(
         widths[index] ?? params[widthKey],
         0,
         0.6,
       );
-      if (positions) {
-        const min = index === 0
-          ? params.stemEnd + gap
-          : params[PETAL_PROFILE_V_KEYS[index - 1]] + gap;
-        const max = index === PETAL_PROFILE_POINT_COUNT - 1
-          ? PETAL_PROFILE_TIP_CONTROL_MAX
-          : params[PETAL_PROFILE_V_KEYS[index + 1]] - gap;
-        params[positionKey] = THREE.MathUtils.clamp(
-          positions[index] ?? params[positionKey],
-          min,
-          max,
-        );
-      }
     }
     uniforms.uLength.value = params.petalLen;
     bakeRamps();
@@ -1291,8 +1248,8 @@ void main() {
       setPetalOutlineParams(params.petalLen, widths);
     },
     /** Complete flat petal outline — driven by the Studio outline editor. */
-    setPetalOutline(petalLen: number, widths: number[], positions: number[]) {
-      setPetalOutlineParams(petalLen, widths, positions);
+    setPetalOutline(petalLen: number, widths: number[]) {
+      setPetalOutlineParams(petalLen, widths);
     },
     /** Petal length — kept outside the outline canvas to avoid tip-handle overlap. */
     setPetalLength(petalLen: number) {
