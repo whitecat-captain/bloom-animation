@@ -19,6 +19,7 @@ import {
 import PetalOutlineEditor from "./PetalOutlineEditor";
 import PetalShapePreview from "./PetalShapePreview";
 import PhyllotaxisPreview from "./PhyllotaxisPreview";
+import { PETAL_PROFILE_TIP_CONTROL_MAX } from "./petalProfile";
 import StudioDesignPane, {
   type PetalFormKey,
   type PhyllotaxisKey,
@@ -49,19 +50,26 @@ const RES_OPTIONS: { label: string; h: number }[] = [
   { label: "4K", h: 2160 },
 ];
 const DEFAULT_RES = 1; // 1080p
-const DEFAULT_PETAL_SHAPE: PetalShapeState = {
+const ROSE_PETAL_SHAPE = {
   petalLen: 0.95,
+  v0: 0.16,
   w0: 0.16,
+  v1: 0.38,
   w1: 0.28,
-  w2: 0.3,
-  w3: 0.2,
+  v2: 0.62,
+  w2: 0.27,
+  v3: 0.80,
+  w3: 0.18,
+  v4: PETAL_PROFILE_TIP_CONTROL_MAX,
+  w4: 0.02,
   curlOpen: -0.35,
   curlBias: 2.3,
   cup: 0.4,
   sideCurl: 0.45,
   waveAmp: 0.035,
   asym: 0.08,
-};
+} satisfies PetalShapeState;
+const DEFAULT_PETAL_SHAPE: PetalShapeState = { ...ROSE_PETAL_SHAPE };
 const DEFAULT_DESIGN_STATE: FlowerDesignState = {
   phyllotaxis: {
     numPetals: 36,
@@ -125,21 +133,11 @@ const AURORA_ROSE_PARAMS: FlowerPresetParams = {
   outAngle: 68,
   tiltBias: 2.2,
   transition: 0.35,
-  petalLen: 0.95,
   curlClosed: 1.7,
-  curlOpen: -0.35,
-  curlBias: 2.3,
   propagation: 1.2,
-  w0: 0.16,
-  w1: 0.28,
-  w2: 0.3,
-  w3: 0.2,
-  cup: 0.4,
-  sideCurl: 0.45,
+  ...ROSE_PETAL_SHAPE,
   wrapWidth: 0.35,
   wrapCup: 0.5,
-  waveAmp: 0.035,
-  asym: 0.08,
   jitter: 0.04,
   noiseAmp: 0.045,
   noiseFreq: 5,
@@ -175,10 +173,16 @@ const CRIMSON_DAHLIA_PARAMS: FlowerPresetParams = {
   propagation: 1.2,
   // Lance profile: narrow base, widest ~40% up, easing to a ROUNDED point —
   // a generous tip width keeps the rings reading as a ruffle, not star spikes.
+  v0: 0.14,
   w0: 0.11,
+  v1: 0.38,
   w1: 0.28,
+  v2: 0.62,
   w2: 0.28,
+  v3: 0.86,
   w3: 0.16,
+  v4: 0.95,
+  w4: 0.045,
   cup: 0.6, // boat/trough fold along the midrib
   sideCurl: 0.5,
   wrapWidth: 0.12,
@@ -201,12 +205,12 @@ const CRIMSON_DAHLIA_PARAMS: FlowerPresetParams = {
 // centre height keeps it flat, and a low outer angle with an early tilt
 // falloff fans the rays up and out into the star. Hand-tuned in the studio.
 const GARLAND_DAISY_PARAMS: FlowerPresetParams = {
-  numPetals: 51,
+  numPetals: 43,
   goldenAngle: 137.5,
   outwardPush: true,
-  radius: 0.1, // all rays attach at a tight central hub...
-  radiusBias: 3.0, // ...and only the outermost drift off it
-  height: 0.0, // completely flat rosette, no dome
+  radius: 0.11, // all rays attach near the golden disc...
+  radiusBias: 2.45, // ...then separate into a loose daisy ring
+  height: 0.02, // nearly flat, with just enough lift for the disc
   heightBias: 1.2,
   scaleInner: 0.1, // disc florets stay tiny against the long rays
   tiltInner: 0.8, // every ray leans well out from the vertical
@@ -215,21 +219,27 @@ const GARLAND_DAISY_PARAMS: FlowerPresetParams = {
   // A wide bloom wavefront keeps the centre florets half-open — splayed
   // little tubes that read as the fluffy golden disc of a real daisy.
   transition: 0.55,
-  petalLen: 1.05, // long slender straps
+  petalLen: 1.2, // long slender straps like daisy rays
   curlClosed: 1.6,
-  curlOpen: 0.08, // almost flat, the faintest upward scoop
+  curlOpen: 0.03, // almost flat, the faintest upward scoop
   curlBias: 2.0,
   propagation: 1.2,
-  // Strap (ligulate) profile: near-parallel edges, softly rounded tip.
-  w0: 0.07,
-  w1: 0.13,
-  w2: 0.16,
-  w3: 0.14,
-  cup: 0.3, // shallow lengthwise groove
-  sideCurl: 0.25,
+  // Strap (ligulate) profile: narrow base, near-parallel sides, blunt head.
+  v0: 0.09,
+  w0: 0.045,
+  v1: 0.25,
+  w1: 0.105,
+  v2: 0.68,
+  w2: 0.13,
+  v3: 0.88,
+  w3: 0.125,
+  v4: 0.95,
+  w4: 0.115,
+  cup: 0.24, // shallow lengthwise groove
+  sideCurl: 0.12,
   wrapWidth: 0.15,
   wrapCup: 0.3,
-  waveAmp: 0.02,
+  waveAmp: 0.012,
   asym: 0.05,
   jitter: 0.06, // a little raggedness — real rays never sit perfectly
   noiseAmp: 0.04,
@@ -477,9 +487,11 @@ export default function StudioCanvas() {
       },
     );
     sceneRef.current = scene;
+    scene.applyPreset(FLOWER_PRESETS[0].params);
+    scene.setPalette(FLOWER_PRESETS[0].palette);
     scene.setBloom(scene.bloomMax);
-    // Boot look is preset 0 (Aurora Rose), which mirrors the scene defaults, so
-    // resets start out pointing at it too.
+    // Boot look is preset 0 (Aurora Rose), so its shared preset values are also
+    // the source of truth for the initial mesh and reset baseline.
     scene.setResetBaseline(FLOWER_PRESETS[0].params);
 
     // Touch devices have no wheel and no Opt key, so give them OrbitControls'
@@ -555,11 +567,13 @@ export default function StudioCanvas() {
     ({
       petalLen,
       widths,
+      positions,
     }: {
       petalLen: number;
-      widths: [number, number, number, number];
+      widths: [number, number, number, number, number];
+      positions: [number, number, number, number, number];
     }) => {
-      sceneRef.current?.setPetalOutline(petalLen, widths);
+      sceneRef.current?.setPetalOutline(petalLen, widths, positions);
     },
     [],
   );
@@ -592,6 +606,9 @@ export default function StudioCanvas() {
     if (!scene) return;
 
     switch (key) {
+      case "petalLen":
+        scene.setPetalLength(value);
+        break;
       case "curlOpen":
         scene.setCurlOpen(value);
         break;

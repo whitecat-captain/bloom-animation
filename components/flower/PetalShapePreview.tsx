@@ -5,6 +5,8 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { startVisibilityGatedLoop } from "./visibilityLoop";
 import type { PetalShapeState } from "./flowerScene";
+import { petalWidthAt } from "./petalProfile";
+import { createPetalUvTopology } from "./petalMesh";
 
 const STEM_WIDTH = 0.03;
 const STEM_END = 0.04;
@@ -12,28 +14,21 @@ const DEFAULT_CAMERA_POSITION = new THREE.Vector3(0.76, 0.55, 1.9);
 const DEFAULT_CONTROLS_TARGET = new THREE.Vector3(0, 0, 0);
 type PaletteStops = [number, number, number][];
 
-function catmullRom(pts: number[], t: number) {
-  const n = pts.length - 1;
-  const f = Math.min(t * n, n - 1e-6);
-  const i = Math.floor(f);
-  const s = f - i;
-  const p0 = pts[Math.max(i - 1, 0)];
-  const p1 = pts[i];
-  const p2 = pts[i + 1];
-  const p3 = pts[Math.min(i + 2, n)];
-  return (
-    0.5 *
-    (2 * p1 +
-      (-p0 + p2) * s +
-      (2 * p0 - 5 * p1 + 4 * p2 - p3) * s * s +
-      (-p0 + 3 * p1 - 3 * p2 + p3) * s * s * s)
-  );
-}
-
 function widthAt(shape: PetalShapeState, v: number) {
-  const widthPts = [STEM_WIDTH, shape.w0, shape.w1, shape.w2, shape.w3, 0.002];
-  if (v < STEM_END) return STEM_WIDTH;
-  return Math.max(catmullRom(widthPts, (v - STEM_END) / (1 - STEM_END)), 0.002);
+  return petalWidthAt(
+    {
+      stemWidth: STEM_WIDTH,
+      stemEnd: STEM_END,
+      points: [
+        { v: shape.v0, width: shape.w0 },
+        { v: shape.v1, width: shape.w1 },
+        { v: shape.v2, width: shape.w2 },
+        { v: shape.v3, width: shape.w3 },
+        { v: shape.v4, width: shape.w4 },
+      ],
+    },
+    v,
+  );
 }
 
 function mixStop(
@@ -80,10 +75,11 @@ function petalPoint(
   spine.multiplyScalar(shape.petalLen);
 
   const width = widthAt(shape, v) * (1 + shape.asym * u);
+  const detailFade = Math.min(Math.max(width / 0.035, 0), 1);
   const x = u * width;
   let zLocal = -shape.cup * (1 - u * u) * width;
   zLocal +=
-    shape.waveAmp * u * u * Math.sin(v * 11 + u * 2.3);
+    detailFade * shape.waveAmp * u * u * Math.sin(v * 11 + u * 2.3);
 
   const sideAngle = shape.sideCurl * x;
   const cos = Math.cos(sideAngle);
@@ -102,10 +98,10 @@ function petalPoint(
 function makePetalPreviewGeometry(shape: PetalShapeState, palette: PaletteStops) {
   const xSegments = 28;
   const ySegments = 72;
+  const topology = createPetalUvTopology(xSegments, ySegments);
   const positions: number[] = [];
   const uvs: number[] = [];
   const colors: number[] = [];
-  const indices: number[] = [];
   const guidePositions: number[] = [];
   const addGuide = (points: THREE.Vector3[]) => {
     for (let i = 1; i < points.length; i++) {
@@ -115,27 +111,14 @@ function makePetalPreviewGeometry(shape: PetalShapeState, palette: PaletteStops)
     }
   };
 
-  for (let y = 0; y <= ySegments; y++) {
-    const v = y / ySegments;
-    for (let x = 0; x <= xSegments; x++) {
-      const u = x / xSegments;
-      const p = petalPoint(shape, u, v);
-      const color = previewColorAt(palette, v);
-      positions.push(p.x, p.y, p.z);
-      uvs.push(u, v);
-      colors.push(color[0], color[1], color[2]);
-    }
-  }
-
-  const row = xSegments + 1;
-  for (let y = 0; y < ySegments; y++) {
-    for (let x = 0; x < xSegments; x++) {
-      const a = y * row + x;
-      const b = a + 1;
-      const c = a + row;
-      const d = c + 1;
-      indices.push(a, c, b, b, c, d);
-    }
+  for (let i = 0; i < topology.uvs.length; i += 2) {
+    const u = topology.uvs[i];
+    const v = topology.uvs[i + 1];
+    const p = petalPoint(shape, u, v);
+    const color = previewColorAt(palette, v);
+    positions.push(p.x, p.y, p.z);
+    uvs.push(u, v);
+    colors.push(color[0], color[1], color[2]);
   }
   addGuide(
     Array.from({ length: 38 }, (_, i) =>
@@ -151,7 +134,7 @@ function makePetalPreviewGeometry(shape: PetalShapeState, palette: PaletteStops)
   });
 
   const surface = new THREE.BufferGeometry();
-  surface.setIndex(indices);
+  surface.setIndex(topology.indices);
   surface.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
   surface.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
   surface.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));

@@ -4,6 +4,8 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { PETAL_PROFILE_TIP_CONTROL_MAX, petalWidthAt } from "./petalProfile";
+import { createPetalUvTopology } from "./petalMesh";
 
 /**
  * Non-interactive "dreamy photography" demo of the phyllotaxis flower:
@@ -31,10 +33,16 @@ export function createDreamyScene(container: HTMLElement) {
     propagation: 1.2,
     stemWidth: 0.03,
     stemEnd: 0.04,
+    v0: 0.2,
     w0: 0.16,
+    v1: 0.4,
     w1: 0.28,
+    v2: 0.62,
     w2: 0.3,
+    v3: 0.82,
     w3: 0.2,
+    v4: PETAL_PROFILE_TIP_CONTROL_MAX,
+    w4: 0.002,
     cup: 0.4,
     sideCurl: 0.45,
     waveAmp: 0.035,
@@ -61,33 +69,27 @@ export function createDreamyScene(container: HTMLElement) {
   );
   rampTex.minFilter = rampTex.magFilter = THREE.LinearFilter;
 
-  function catmullRom(pts: number[], t: number) {
-    const n = pts.length - 1;
-    const f = Math.min(t * n, n - 1e-6);
-    const i = Math.floor(f),
-      s = f - i;
-    const p0 = pts[Math.max(i - 1, 0)],
-      p1 = pts[i],
-      p2 = pts[i + 1],
-      p3 = pts[Math.min(i + 2, n)];
-    return (
-      0.5 *
-      (2 * p1 +
-        (-p0 + p2) * s +
-        (2 * p0 - 5 * p1 + 4 * p2 - p3) * s * s +
-        (-p0 + 3 * p1 - 3 * p2 + p3) * s * s * s)
-    );
-  }
   {
-    const { stemWidth, stemEnd, w0, w1, w2, w3, curlBias } = params;
-    const widthPts = [stemWidth, w0, w1, w2, w3, 0.002];
+    const { stemWidth, stemEnd, curlBias } = params;
+    const points = [
+      { v: params.v0, width: params.w0 },
+      { v: params.v1, width: params.w1 },
+      { v: params.v2, width: params.w2 },
+      { v: params.v3, width: params.w3 },
+      { v: params.v4, width: params.w4 },
+    ];
     const half = THREE.DataUtils.toHalfFloat;
     for (let i = 0; i < RAMP_RES; i++) {
       const v = i / (RAMP_RES - 1);
       rampData[i * 4] = half(
-        v < stemEnd
-          ? stemWidth
-          : Math.max(catmullRom(widthPts, (v - stemEnd) / (1 - stemEnd)), 0.002),
+        petalWidthAt(
+          {
+            stemWidth,
+            stemEnd,
+            points,
+          },
+          v,
+        ),
       );
       rampData[i * 4 + 1] = half(
         curlBias * Math.pow(Math.max(v, 1e-4), curlBias - 1),
@@ -156,8 +158,9 @@ float openness(float s, float bloomLocal) {
 }
 
 vec3 petalPos(vec2 uvIn, float bloomLocal, float seed) {
-  float u = uvIn.x * 2.0 - 1.0;
-  float v = uvIn.y;
+  vec2 uvSafe = clamp(uvIn, vec2(0.0), vec2(1.0));
+  float u = uvSafe.x * 2.0 - 1.0;
+  float v = uvSafe.y;
   const int N = 24;
   float ds = v / float(N);
   float ang = 0.0;
@@ -174,11 +177,12 @@ vec3 petalPos(vec2 uvIn, float bloomLocal, float seed) {
   float wrap = 1.0 - bloomLocal;
   float width = texture2D(uRamps, vec2(v, 0.5)).r * (1.0 + uAsym * u * relax)
     * (1.0 + 0.35 * wrap);
+  float detailFade = smoothstep(0.0, 0.035, width);
   float x = u * width;
   float zl = -uCup * (1.0 + 0.5 * wrap) * (1.0 - u * u) * width;
-  zl += uWaveAmp * relax * u * u * sin(v * uWaveFreq + seed * 17.0 + u * 2.3 + seed);
-  zl += 0.01 * relax * sin(seed * 7.0 + v * 5.0) * v;
-  zl += uNoiseAmp * v * bloomLocal
+  zl += detailFade * uWaveAmp * relax * u * u * sin(v * uWaveFreq + seed * 17.0 + u * 2.3 + seed);
+  zl += detailFade * 0.01 * relax * sin(seed * 7.0 + v * 5.0) * v;
+  zl += detailFade * uNoiseAmp * v * bloomLocal
     * (turb(vec3(u * 2.0 + seed, v * uNoiseFreq, seed * 3.7 + uTime * uWindSpeed * 0.15)) - 0.5) * 2.0;
   float sa = uSideCurl * x * relax;
   vec2 xz = mat2(cos(sa), -sin(sa), sin(sa), cos(sa)) * vec2(x, zl);
@@ -195,9 +199,23 @@ void main() {
   float bloomLocal = 1.0 - mask;
 
   vec3 pos = petalPos(uv, bloomLocal, aSeed);
-  vec3 pu = petalPos(uv + vec2(0.004, 0.0), bloomLocal, aSeed);
-  vec3 pv = petalPos(uv + vec2(0.0, 0.004), bloomLocal, aSeed);
-  vec3 nrm = normalize(cross(pu - pos, pv - pos));
+  vec3 tu;
+  vec3 tv;
+  if (uv.y > 0.996) {
+    float sampleV = uv.y - 0.004;
+    vec3 pl = petalPos(vec2(0.496, sampleV), bloomLocal, aSeed);
+    vec3 pr = petalPos(vec2(0.504, sampleV), bloomLocal, aSeed);
+    vec3 pc = petalPos(vec2(0.5, sampleV), bloomLocal, aSeed);
+    tu = pr - pl;
+    tv = pos - pc;
+  } else {
+    float du = uv.x > 0.996 ? -0.004 : 0.004;
+    vec3 pu = petalPos(uv + vec2(du, 0.0), bloomLocal, aSeed);
+    vec3 pv = petalPos(uv + vec2(0.0, 0.004), bloomLocal, aSeed);
+    tu = du > 0.0 ? pu - pos : pos - pu;
+    tv = pv - pos;
+  }
+  vec3 nrm = normalize(cross(tu, tv));
   float shell = 1.0 + uShellGap * aU * (1.0 - bloomLocal);
   pos *= shell;
   float ta = -aTilt * bloomLocal;
@@ -322,8 +340,17 @@ void main() {
 
   // ===== instanced petals — same layout as flowerScene.buildFlower =====
   const n = params.numPetals;
-  const geo = new THREE.PlaneGeometry(1, 1, 24, 64);
-  geo.deleteAttribute("normal");
+  const topology = createPetalUvTopology(24, 64);
+  const geo = new THREE.BufferGeometry();
+  geo.setIndex(topology.indices);
+  geo.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(
+      new Float32Array((topology.uvs.length / 2) * 3),
+      3,
+    ),
+  );
+  geo.setAttribute("uv", new THREE.Float32BufferAttribute(topology.uvs, 2));
   const aU = new Float32Array(n),
     aSeed = new Float32Array(n),
     aTilt = new Float32Array(n);

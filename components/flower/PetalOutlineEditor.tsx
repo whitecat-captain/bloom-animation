@@ -7,59 +7,56 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import type { PetalShapeState } from "./flowerScene";
+import {
+  PETAL_PROFILE_TIP_CONTROL_MAX,
+  petalWidthAt,
+  type PetalProfilePoint,
+} from "./petalProfile";
 
 type PaletteStops = [number, number, number][];
-type WidthTuple = [number, number, number, number];
-type OutlineChange = { petalLen: number; widths: WidthTuple };
-type PetalDrag = { kind: "length" } | { kind: "width"; index: number };
+type ProfileTuple = [
+  PetalProfilePoint,
+  PetalProfilePoint,
+  PetalProfilePoint,
+  PetalProfilePoint,
+  PetalProfilePoint,
+];
+type OutlineChange = {
+  petalLen: number;
+  widths: [number, number, number, number, number];
+  positions: [number, number, number, number, number];
+};
+type PetalDrag = { kind: "point"; index: number };
 type PetalHandle = { x: number; y: number; drag: PetalDrag };
 type PetalLayout = {
   bottom: number;
   centerX: number;
-  maxLengthPx: number;
+  lengthPx: number;
   widthScale: number;
 };
 
 const STEM_END = 0.04;
 const STEM_WIDTH = 0.03;
-const TIP_WIDTH = 0.002;
 const WIDTH_MIN = 0;
 const WIDTH_MAX = 0.6;
 const LENGTH_MIN = 0.3;
 const LENGTH_MAX = 1.5;
 const LENGTH_MIN_DRAW_RATIO = 0.46;
+const POINT_MIN_GAP = 0.025;
 const HIT_RADIUS = 18;
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(Math.max(n, min), max);
 }
 
-function catmullRom(pts: number[], t: number) {
-  const n = pts.length - 1;
-  const f = Math.min(t * n, n - 1e-6);
-  const i = Math.floor(f);
-  const s = f - i;
-  const p0 = pts[Math.max(i - 1, 0)];
-  const p1 = pts[i];
-  const p2 = pts[i + 1];
-  const p3 = pts[Math.min(i + 2, n)];
-  return (
-    0.5 *
-    (2 * p1 +
-      (-p0 + p2) * s +
-      (2 * p0 - 5 * p1 + 4 * p2 - p3) * s * s +
-      (-p0 + 3 * p1 - 3 * p2 + p3) * s * s * s)
-  );
-}
-
-function petalHalfWidth(v: number, widths: WidthTuple) {
-  if (v < STEM_END) return STEM_WIDTH;
-  return Math.max(
-    catmullRom(
-      [STEM_WIDTH, ...widths, TIP_WIDTH],
-      (v - STEM_END) / (1 - STEM_END),
-    ),
-    TIP_WIDTH,
+function petalHalfWidth(v: number, shape: PetalShapeState) {
+  return petalWidthAt(
+    {
+      stemWidth: STEM_WIDTH,
+      stemEnd: STEM_END,
+      points: profilePoints(shape),
+    },
+    v,
   );
 }
 
@@ -80,21 +77,47 @@ function rgba(stop: [number, number, number], alpha: number) {
   return `rgba(${Math.round(stop[0] * 255)}, ${Math.round(stop[1] * 255)}, ${Math.round(stop[2] * 255)}, ${alpha})`;
 }
 
-function widthTuple(shape: PetalShapeState): WidthTuple {
-  return [shape.w0, shape.w1, shape.w2, shape.w3];
+function profilePoints(shape: PetalShapeState): ProfileTuple {
+  return [
+    { v: shape.v0, width: shape.w0 },
+    { v: shape.v1, width: shape.w1 },
+    { v: shape.v2, width: shape.w2 },
+    { v: shape.v3, width: shape.w3 },
+    { v: shape.v4, width: shape.w4 },
+  ];
+}
+
+function widthTuple(shape: PetalShapeState): OutlineChange["widths"] {
+  return [shape.w0, shape.w1, shape.w2, shape.w3, shape.w4];
+}
+
+function positionTuple(shape: PetalShapeState): OutlineChange["positions"] {
+  return [shape.v0, shape.v1, shape.v2, shape.v3, shape.v4];
+}
+
+function shapeWithProfile(
+  shape: PetalShapeState,
+  points: ProfileTuple,
+): PetalShapeState {
+  return {
+    ...shape,
+    v0: points[0].v,
+    w0: points[0].width,
+    v1: points[1].v,
+    w1: points[1].width,
+    v2: points[2].v,
+    w2: points[2].width,
+    v3: points[3].v,
+    w3: points[3].width,
+    v4: points[4].v,
+    w4: points[4].width,
+  };
 }
 
 function lengthToDrawRatio(petalLen: number) {
   const t = (clamp(petalLen, LENGTH_MIN, LENGTH_MAX) - LENGTH_MIN) /
     (LENGTH_MAX - LENGTH_MIN);
   return LENGTH_MIN_DRAW_RATIO + t * (1 - LENGTH_MIN_DRAW_RATIO);
-}
-
-function drawRatioToLength(ratio: number) {
-  const t =
-    (clamp(ratio, LENGTH_MIN_DRAW_RATIO, 1) - LENGTH_MIN_DRAW_RATIO) /
-    (1 - LENGTH_MIN_DRAW_RATIO);
-  return LENGTH_MIN + t * (LENGTH_MAX - LENGTH_MIN);
 }
 
 function drawOutline(
@@ -109,7 +132,7 @@ function drawOutline(
 ) {
   ctx.clearRect(0, 0, w, h);
 
-  const widths = widthTuple(shape);
+  const points = profilePoints(shape);
   const padX = 18;
   const padY = 12;
   const bottom = h - padY;
@@ -121,14 +144,14 @@ function drawOutline(
     1,
     Math.min(maxLengthPx * 0.86, (w * 0.5 - padX) / WIDTH_MAX),
   );
-  layoutRef.current = { bottom, centerX, maxLengthPx, widthScale };
+  layoutRef.current = { bottom, centerX, lengthPx, widthScale };
 
   const samples = 88;
   const right: [number, number][] = [];
   const left: [number, number][] = [];
   for (let i = 0; i <= samples; i++) {
     const v = i / samples;
-    const halfWidth = petalHalfWidth(v, widths) * widthScale;
+    const halfWidth = petalHalfWidth(v, shape) * widthScale;
     const y = bottom - v * lengthPx;
     right.push([centerX + halfWidth, y]);
     left.push([centerX - halfWidth, y]);
@@ -138,7 +161,6 @@ function drawOutline(
   const shoulder = palette[1] ?? tip;
   const base = palette[2] ?? shoulder;
   const handleColor = mixStop(shoulder, base, 0.28);
-  const lengthHandleColor = mixStop(tip, shoulder, 0.22);
   const fill = ctx.createLinearGradient(0, bottom, 0, top);
   fill.addColorStop(0, rgba(base, 0.44));
   fill.addColorStop(0.45, rgba(shoulder, 0.34));
@@ -162,24 +184,13 @@ function drawOutline(
   ctx.stroke();
   ctx.setLineDash([]);
 
-  const handles: PetalHandle[] = [{ x: centerX, y: top, drag: { kind: "length" } }];
+  const handles: PetalHandle[] = [];
 
-  const lengthActive = activeDrag?.kind === "length";
-  ctx.beginPath();
-  ctx.arc(centerX, top, lengthActive ? 6 : 4.8, 0, Math.PI * 2);
-  ctx.fillStyle = lengthActive
-    ? "rgba(255, 255, 255, 0.95)"
-    : rgba(lengthHandleColor, 0.96);
-  ctx.fill();
-  ctx.lineWidth = 1.5;
-  ctx.strokeStyle = "rgba(5, 7, 15, 0.76)";
-  ctx.stroke();
-
-  for (let index = 0; index < widths.length; index++) {
-    const v = STEM_END + ((index + 1) / 5) * (1 - STEM_END);
-    const x = centerX + widths[index] * widthScale;
+  for (let index = 0; index < points.length; index++) {
+    const { v, width } = points[index];
+    const x = centerX + width * widthScale;
     const y = bottom - v * lengthPx;
-    handles.push({ x, y, drag: { kind: "width", index } });
+    handles.push({ x, y, drag: { kind: "point", index } });
 
     ctx.beginPath();
     ctx.moveTo(centerX, y);
@@ -187,7 +198,7 @@ function drawOutline(
     ctx.strokeStyle = "rgba(255, 255, 255, 0.18)";
     ctx.stroke();
 
-    const active = activeDrag?.kind === "width" && activeDrag.index === index;
+    const active = activeDrag?.kind === "point" && activeDrag.index === index;
     ctx.beginPath();
     ctx.arc(x, y, active ? 6 : 4.5, 0, Math.PI * 2);
     ctx.fillStyle = active ? "rgba(255, 255, 255, 0.95)" : rgba(handleColor, 0.96);
@@ -217,7 +228,7 @@ export default function PetalOutlineEditor({
   const layoutRef = useRef<PetalLayout>({
     bottom: 0,
     centerX: 0,
-    maxLengthPx: 1,
+    lengthPx: 1,
     widthScale: 1,
   });
   const dragRef = useRef<PetalDrag | null>(null);
@@ -278,6 +289,7 @@ export default function PetalOutlineEditor({
     onOutlineChangeRef.current({
       petalLen: nextShape.petalLen,
       widths: widthTuple(nextShape),
+      positions: positionTuple(nextShape),
     });
   };
 
@@ -308,7 +320,7 @@ export default function PetalOutlineEditor({
 
   const cursorForDrag = (drag: PetalDrag | null) => {
     if (!drag) return "default";
-    return drag.kind === "length" ? "ns-resize" : "ew-resize";
+    return "move";
   };
 
   const updateCursor = (event: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -354,35 +366,28 @@ export default function PetalOutlineEditor({
     const rect = canvas.getBoundingClientRect();
     const localX = event.clientX - rect.left;
     const localY = event.clientY - rect.top;
-    const { bottom, centerX, maxLengthPx, widthScale } = layoutRef.current;
-
-    if (drag.kind === "length") {
-      const nextPetalLen = drawRatioToLength((bottom - localY) / maxLengthPx);
-      if (Math.abs(shapeRef.current.petalLen - nextPetalLen) < 0.001) return;
-      emitOutlineChange({
-        ...shapeRef.current,
-        petalLen: nextPetalLen,
-      });
-      draw();
-      return;
-    }
+    const { bottom, centerX, lengthPx, widthScale } = layoutRef.current;
 
     const nextWidth = clamp(
       (localX - centerX) / widthScale,
       WIDTH_MIN,
       WIDTH_MAX,
     );
-    const nextWidths = widthTuple(shapeRef.current);
+    const nextPoints = profilePoints(shapeRef.current);
     const index = drag.index;
-    if (Math.abs(nextWidths[index] - nextWidth) < 0.001) return;
-    nextWidths[index] = nextWidth;
-    emitOutlineChange({
-      ...shapeRef.current,
-      w0: nextWidths[0],
-      w1: nextWidths[1],
-      w2: nextWidths[2],
-      w3: nextWidths[3],
-    });
+    const lower = index === 0
+      ? STEM_END + POINT_MIN_GAP
+      : nextPoints[index - 1].v + POINT_MIN_GAP;
+    const upper = index === nextPoints.length - 1
+      ? PETAL_PROFILE_TIP_CONTROL_MAX
+      : nextPoints[index + 1].v - POINT_MIN_GAP;
+    const nextV = clamp((bottom - localY) / lengthPx, lower, upper);
+    if (
+      Math.abs(nextPoints[index].width - nextWidth) < 0.001 &&
+      Math.abs(nextPoints[index].v - nextV) < 0.001
+    ) return;
+    nextPoints[index] = { v: nextV, width: nextWidth };
+    emitOutlineChange(shapeWithProfile(shapeRef.current, nextPoints));
     draw();
   };
 
