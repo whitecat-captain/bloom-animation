@@ -226,8 +226,8 @@ const GARLAND_DAISY_PARAMS: FlowerPresetParams = {
   waveAmp: 0.012,
   asym: 0.05,
   jitter: 0.06, // a little raggedness — real rays never sit perfectly
-  noiseAmp: 0.04,
-  noiseFreq: 6,
+  noiseAmp: 0.01,
+  noiseFreq: 1,
   shellGap: 0.1,
   windAmp: 0.16, // light rays flutter more than heavy dahlia scales
   windSpeed: 1.6,
