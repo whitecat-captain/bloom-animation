@@ -1,0 +1,172 @@
+.glass-reference__controls {
+  padding: 22px;
+  border-radius: var(--glass-radius);
+}
+
+.glass-reference__controls-content,
+.glass-reference__range {
+  display: flex;
+  align-items: center;
+}
+
+.glass-reference__controls-content {
+  position: relative;
+  z-index: 2;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+.glass-reference__mode {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--glass-action);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.glass-reference__mode button {
+  min-width: 92px;
+  min-height: 34px;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.58);
+  background: transparent;
+  font: 600 11px/1 "Outfit", var(--font-geist-sans), system-ui, sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.glass-reference__mode button.is-selected {
+  color: rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.13);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+
+.glass-reference__range {
+  flex: 1;
+  max-width: 370px;
+  gap: 14px;
+  color: rgba(255, 255, 255, 0.72);
+  font-family: "Outfit", var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.glass-reference__range input {
+  flex: 1;
+  min-width: 0;
+  accent-color: rgba(255, 255, 255, 0.94);
+}
+
+.glass-reference__range output {
+  width: 36px;
+  color: var(--glass-muted);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  text-align: right;
+}
+
+/* Preserved from the /mockup control pills. */
+.glass-reference__mock-controls {
+  display: flex;
+  width: min(100%, 480px);
+  flex-direction: column;
+  gap: 14px;
+}
+
+.glass-reference__mock-control {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 56px;
+  padding: 12px 22px;
+  border-radius: 13px;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glass-reference__mock-control-name {
+  flex: 0 0 115px;
+  color: rgba(255, 255, 255, 0.62);
+  font-family: "Outfit", var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.glass-reference__mock-control input[type="range"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 24px;
+  appearance: none;
+  cursor: pointer;
+  background: transparent;
+  -webkit-appearance: none;
+}
+
+.glass-reference__mock-control input[type="range"]::-webkit-slider-runnable-track {
+  height: 5px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.glass-reference__mock-control input[type="range"]::-moz-range-track {
+  height: 5px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.glass-reference__mock-control input[type="range"]::-webkit-slider-thumb {
+  width: 17px;
+  height: 17px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+  -webkit-appearance: none;
+}
+
+.glass-reference__mock-control input[type="range"]::-moz-range-thumb {
+  width: 17px;
+  height: 17px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+}
+
+.glass-reference__mock-control output {
+  flex: 0 0 50px;
+  color: rgba(255, 255, 255, 0.92);
+  font-family: "SF Mono", "Menlo", var(--font-geist-mono), monospace;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+@media (max-width: 720px) {
+  .glass-reference__controls-content {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .glass-reference__range { max-width: none; }
+  .glass-reference__mock-controls { width: 100%; }
+}
+
+@media (max-width: 460px) {
+  .glass-reference__range { gap: 10px; }
+  .glass-reference__mock-control { gap: 10px; padding: 11px 14px; }
+  .glass-reference__mock-control-name { flex-basis: 92px; font-size: 10px; }
+  .glass-reference__mock-control output { flex-basis: 42px; font-size: 11px; }
+}

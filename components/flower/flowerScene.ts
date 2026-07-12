@@ -1164,7 +1164,7 @@ void main() {
     setWheelZoomEnabled(on: boolean) {
       controls.enableZoom = on;
     },
-    /** Rebuilds the layout — used by the /mockup showcase sliders. */
+    /** Rebuilds the phyllotaxis layout after a design value changes. */
     setGoldenAngle(deg: number) {
       params.goldenAngle = deg;
       refreshDesignControllers();
