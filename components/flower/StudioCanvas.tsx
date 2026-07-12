@@ -19,7 +19,6 @@ import {
 import PetalOutlineEditor from "./PetalOutlineEditor";
 import PetalShapePreview from "./PetalShapePreview";
 import PhyllotaxisPreview from "./PhyllotaxisPreview";
-import { PETAL_PROFILE_TIP_CONTROL_MAX } from "./petalProfile";
 import StudioDesignPane, {
   type PetalFormKey,
   type PhyllotaxisKey,
@@ -52,15 +51,10 @@ const RES_OPTIONS: { label: string; h: number }[] = [
 const DEFAULT_RES = 1; // 1080p
 const ROSE_PETAL_SHAPE = {
   petalLen: 0.95,
-  v0: 0.2,
   w0: 0.16,
-  v1: 0.4,
   w1: 0.28,
-  v2: 0.62,
   w2: 0.3,
-  v3: 0.82,
   w3: 0.2,
-  v4: PETAL_PROFILE_TIP_CONTROL_MAX,
   w4: 0.02,
   curlOpen: -0.35,
   curlBias: 2.3,
@@ -173,15 +167,10 @@ const CRIMSON_DAHLIA_PARAMS: FlowerPresetParams = {
   propagation: 1.2,
   // Lance profile: narrow base, widest ~40% up, easing to a ROUNDED point —
   // a generous tip width keeps the rings reading as a ruffle, not star spikes.
-  v0: 0.14,
   w0: 0.11,
-  v1: 0.38,
   w1: 0.28,
-  v2: 0.62,
   w2: 0.28,
-  v3: 0.86,
   w3: 0.16,
-  v4: 0.95,
   w4: 0.045,
   cup: 0.6, // boat/trough fold along the midrib
   sideCurl: 0.5,
@@ -225,15 +214,10 @@ const GARLAND_DAISY_PARAMS: FlowerPresetParams = {
   curlBias: 2.0,
   propagation: 1.2,
   // Strap (ligulate) profile: narrow base, near-parallel sides, blunt head.
-  v0: 0.09,
   w0: 0.045,
-  v1: 0.25,
   w1: 0.105,
-  v2: 0.68,
   w2: 0.13,
-  v3: 0.88,
   w3: 0.125,
-  v4: 0.95,
   w4: 0.115,
   cup: 0.24, // shallow lengthwise groove
   sideCurl: 0.12,
@@ -567,13 +551,11 @@ export default function StudioCanvas() {
     ({
       petalLen,
       widths,
-      positions,
     }: {
       petalLen: number;
       widths: [number, number, number, number, number];
-      positions: [number, number, number, number, number];
     }) => {
-      sceneRef.current?.setPetalOutline(petalLen, widths, positions);
+      sceneRef.current?.setPetalOutline(petalLen, widths);
     },
     [],
   );

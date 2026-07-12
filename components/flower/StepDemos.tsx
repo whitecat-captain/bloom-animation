@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { PETAL_PROFILE_TIP_CONTROL_MAX, petalWidthAt } from "./petalProfile";
+import { PETAL_PROFILE_CONTROL_VS, petalWidthAt } from "./petalProfile";
 
 /**
  * Optional linkage to the live 3D flower (the /demo showcase). A demo fires
@@ -362,7 +362,6 @@ const PETAL_STEM_END = 0.04;
 const PETAL_STEM_W = 0.03;
 const W_MIN = 0;
 const W_MAX = 0.42;
-const DEF_PROFILE_VS = [0.2, 0.4, 0.62, 0.82, PETAL_PROFILE_TIP_CONTROL_MAX];
 const DEF_WIDTHS = [0.16, 0.28, 0.3, 0.2, 0.002];
 // Keep the curl in the "gently cupped petal" range — past ~2 the tip rolls
 // over into a comma/hook and stops reading as a petal.
@@ -380,7 +379,7 @@ function petalHalfWidth(v: number, widths: number[]) {
       stemWidth: PETAL_STEM_W,
       stemEnd: PETAL_STEM_END,
       points: widths.map((width, index) => ({
-        v: DEF_PROFILE_VS[index] ?? 1,
+        v: PETAL_PROFILE_CONTROL_VS[index] ?? 1,
         width,
       })),
     },
@@ -504,7 +503,7 @@ function drawPetalLab(
   // draggable width control points (w0..w4)
   const handles: PetalHandle[] = [];
   for (let k = 0; k < widths.length; k++) {
-    const v = DEF_PROFILE_VS[k] ?? 1;
+    const v = PETAL_PROFILE_CONTROL_VS[k] ?? 1;
     const hx = leftCx + widths[k] * wscale,
       hy = bottom - v * Lpx;
     handles.push({ x: hx, y: hy, k });

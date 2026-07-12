@@ -11,6 +11,22 @@ export type PetalProfile = {
 
 export const PETAL_PROFILE_TIP_END = 1;
 export const PETAL_PROFILE_TIP_CONTROL_MAX = 0.965;
+// The first four positions reproduce the original W-only editor's evenly
+// spaced handles. The fifth controls the width where the rounded tip cap starts.
+export const PETAL_PROFILE_CONTROL_VS = [
+  0.232,
+  0.424,
+  0.616,
+  0.808,
+  PETAL_PROFILE_TIP_CONTROL_MAX,
+] as const;
+
+export function petalProfilePointsFromWidths(widths: readonly number[]) {
+  return PETAL_PROFILE_CONTROL_VS.map((v, index) => ({
+    v,
+    width: widths[index] ?? 0,
+  }));
+}
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(Math.max(n, min), max);

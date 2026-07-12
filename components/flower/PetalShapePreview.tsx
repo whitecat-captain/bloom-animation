@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { startVisibilityGatedLoop } from "./visibilityLoop";
 import type { PetalShapeState } from "./flowerScene";
-import { petalWidthAt } from "./petalProfile";
+import { petalProfilePointsFromWidths, petalWidthAt } from "./petalProfile";
 import { createPetalUvTopology } from "./petalMesh";
 
 const STEM_WIDTH = 0.03;
@@ -19,13 +19,13 @@ function widthAt(shape: PetalShapeState, v: number) {
     {
       stemWidth: STEM_WIDTH,
       stemEnd: STEM_END,
-      points: [
-        { v: shape.v0, width: shape.w0 },
-        { v: shape.v1, width: shape.w1 },
-        { v: shape.v2, width: shape.w2 },
-        { v: shape.v3, width: shape.w3 },
-        { v: shape.v4, width: shape.w4 },
-      ],
+      points: petalProfilePointsFromWidths([
+        shape.w0,
+        shape.w1,
+        shape.w2,
+        shape.w3,
+        shape.w4,
+      ]),
     },
     v,
   );
