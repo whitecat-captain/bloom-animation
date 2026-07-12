@@ -199,12 +199,22 @@ void main() {
   float bloomLocal = 1.0 - mask;
 
   vec3 pos = petalPos(uv, bloomLocal, aSeed);
-  float du = uv.x > 0.996 ? -0.004 : 0.004;
-  float dv = uv.y > 0.996 ? -0.004 : 0.004;
-  vec3 pu = petalPos(uv + vec2(du, 0.0), bloomLocal, aSeed);
-  vec3 pv = petalPos(uv + vec2(0.0, dv), bloomLocal, aSeed);
-  vec3 tu = du > 0.0 ? pu - pos : pos - pu;
-  vec3 tv = dv > 0.0 ? pv - pos : pos - pv;
+  vec3 tu;
+  vec3 tv;
+  if (uv.y > 0.996) {
+    float sampleV = uv.y - 0.004;
+    vec3 pl = petalPos(vec2(0.496, sampleV), bloomLocal, aSeed);
+    vec3 pr = petalPos(vec2(0.504, sampleV), bloomLocal, aSeed);
+    vec3 pc = petalPos(vec2(0.5, sampleV), bloomLocal, aSeed);
+    tu = pr - pl;
+    tv = pos - pc;
+  } else {
+    float du = uv.x > 0.996 ? -0.004 : 0.004;
+    vec3 pu = petalPos(uv + vec2(du, 0.0), bloomLocal, aSeed);
+    vec3 pv = petalPos(uv + vec2(0.0, 0.004), bloomLocal, aSeed);
+    tu = du > 0.0 ? pu - pos : pos - pu;
+    tv = pv - pos;
+  }
   vec3 nrm = normalize(cross(tu, tv));
   float shell = 1.0 + uShellGap * aU * (1.0 - bloomLocal);
   pos *= shell;
