@@ -11,13 +11,12 @@ export type PetalProfile = {
 
 export const PETAL_PROFILE_TIP_END = 1;
 export const PETAL_PROFILE_TIP_CONTROL_MAX = 0.965;
-// The first four positions reproduce the original W-only editor's evenly
-// spaced handles. The fifth controls the width where the rounded tip cap starts.
+// Fixed W-only handles, evenly distributed from the stem to the rounded cap.
 export const PETAL_PROFILE_CONTROL_VS = [
-  0.232,
-  0.424,
-  0.616,
-  0.808,
+  0.225,
+  0.41,
+  0.595,
+  0.78,
   PETAL_PROFILE_TIP_CONTROL_MAX,
 ] as const;
 
@@ -51,51 +50,23 @@ export function sanitizePetalProfilePoints(points: PetalProfilePoint[]) {
   }, []);
 }
 
-function segmentSlope(a: PetalProfilePoint, b: PetalProfilePoint) {
-  return (b.width - a.width) / Math.max(b.v - a.v, 1e-4);
-}
-
-function limitedTangents(points: PetalProfilePoint[]) {
-  return points.map((point, index) => {
-    const previous = points[index - 1];
-    const next = points[index + 1];
-    if (!previous || !next) return 0;
-
-    const prevSlope = segmentSlope(previous, point);
-    const nextSlope = segmentSlope(point, next);
-    if (prevSlope === 0 || nextSlope === 0) return 0;
-    if (Math.sign(prevSlope) !== Math.sign(nextSlope)) return 0;
-
-    const tangent = (next.width - previous.width) /
-      Math.max(next.v - previous.v, 1e-4);
-    const limit = Math.min(Math.abs(prevSlope), Math.abs(nextSlope)) * 3;
-    return Math.sign(tangent) * Math.min(Math.abs(tangent), limit);
-  });
-}
-
-function cubicHermite(
-  a: PetalProfilePoint,
-  b: PetalProfilePoint,
-  tangentA: number,
-  tangentB: number,
-  v: number,
-) {
-  const span = Math.max(b.v - a.v, 1e-4);
-  const t = clamp((v - a.v) / span, 0, 1);
-  const t2 = t * t;
-  const t3 = t2 * t;
-  const h00 = 2 * t3 - 3 * t2 + 1;
-  const h10 = t3 - 2 * t2 + t;
-  const h01 = -2 * t3 + 3 * t2;
-  const h11 = t3 - t2;
-  const width =
-    h00 * a.width +
-    h10 * span * tangentA +
-    h01 * b.width +
-    h11 * span * tangentB;
-  const minWidth = Math.min(a.width, b.width);
-  const maxWidth = Math.max(a.width, b.width);
-  return clamp(width, minWidth, maxWidth);
+function catmullRom(values: number[], t: number) {
+  const last = values.length - 1;
+  const scaled = Math.min(clamp(t, 0, 1) * last, last - 1e-6);
+  const index = Math.floor(scaled);
+  const local = scaled - index;
+  const p0 = values[Math.max(index - 1, 0)];
+  const p1 = values[index];
+  const p2 = values[index + 1];
+  const p3 = values[Math.min(index + 2, last)];
+  const local2 = local * local;
+  const local3 = local2 * local;
+  return 0.5 * (
+    2 * p1 +
+    (-p0 + p2) * local +
+    (2 * p0 - 5 * p1 + 4 * p2 - p3) * local2 +
+    (-p0 + 3 * p1 - 3 * p2 + p3) * local3
+  );
 }
 
 function roundedTipCap(a: PetalProfilePoint, v: number) {
@@ -109,22 +80,16 @@ export function petalWidthAt(profile: PetalProfile, v: number) {
   const cleanPoints = sanitizePetalProfilePoints(profile.points);
   if (v < stemEnd || cleanPoints.length === 0) return stemWidth;
 
-  const anchors = [
-    { v: 0, width: stemWidth },
-    { v: stemEnd, width: stemWidth },
-    ...cleanPoints,
-    { v: PETAL_PROFILE_TIP_END, width: 0 },
-  ];
-  const tangents = limitedTangents(anchors);
-
-  if (v <= anchors[0].v) return anchors[0].width;
-  for (let i = 1; i < anchors.length; i++) {
-    const a = anchors[i - 1];
-    const b = anchors[i];
-    if (v > b.v) continue;
-    if (i === anchors.length - 1) return roundedTipCap(a, v);
-    return Math.max(cubicHermite(a, b, tangents[i - 1], tangents[i], v), 0);
+  const tipControl = cleanPoints[cleanPoints.length - 1];
+  if (v <= tipControl.v) {
+    const bodyT = (v - stemEnd) / Math.max(tipControl.v - stemEnd, 1e-4);
+    return Math.max(
+      catmullRom(
+        [stemWidth, ...cleanPoints.map((point) => point.width)],
+        bodyT,
+      ),
+      0,
+    );
   }
-
-  return 0;
+  return roundedTipCap(tipControl, v);
 }
