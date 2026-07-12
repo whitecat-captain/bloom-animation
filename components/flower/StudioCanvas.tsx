@@ -50,25 +50,26 @@ const RES_OPTIONS: { label: string; h: number }[] = [
   { label: "4K", h: 2160 },
 ];
 const DEFAULT_RES = 1; // 1080p
-const DEFAULT_PETAL_SHAPE: PetalShapeState = {
+const ROSE_PETAL_SHAPE = {
   petalLen: 0.95,
-  v0: 0.2,
+  v0: 0.16,
   w0: 0.16,
-  v1: 0.4,
+  v1: 0.38,
   w1: 0.28,
   v2: 0.62,
-  w2: 0.3,
-  v3: 0.82,
-  w3: 0.2,
+  w2: 0.27,
+  v3: 0.80,
+  w3: 0.18,
   v4: PETAL_PROFILE_TIP_CONTROL_MAX,
-  w4: 0.002,
+  w4: 0.02,
   curlOpen: -0.35,
   curlBias: 2.3,
   cup: 0.4,
   sideCurl: 0.45,
   waveAmp: 0.035,
   asym: 0.08,
-};
+} satisfies PetalShapeState;
+const DEFAULT_PETAL_SHAPE: PetalShapeState = { ...ROSE_PETAL_SHAPE };
 const DEFAULT_DESIGN_STATE: FlowerDesignState = {
   phyllotaxis: {
     numPetals: 36,
@@ -132,27 +133,11 @@ const AURORA_ROSE_PARAMS: FlowerPresetParams = {
   outAngle: 68,
   tiltBias: 2.2,
   transition: 0.35,
-  petalLen: 0.95,
   curlClosed: 1.7,
-  curlOpen: -0.35,
-  curlBias: 2.3,
   propagation: 1.2,
-  v0: 0.16,
-  w0: 0.16,
-  v1: 0.4,
-  w1: 0.28,
-  v2: 0.62,
-  w2: 0.3,
-  v3: 0.82,
-  w3: 0.2,
-  v4: PETAL_PROFILE_TIP_CONTROL_MAX,
-  w4: 0.002,
-  cup: 0.4,
-  sideCurl: 0.45,
+  ...ROSE_PETAL_SHAPE,
   wrapWidth: 0.35,
   wrapCup: 0.5,
-  waveAmp: 0.035,
-  asym: 0.08,
   jitter: 0.04,
   noiseAmp: 0.045,
   noiseFreq: 5,
@@ -502,9 +487,11 @@ export default function StudioCanvas() {
       },
     );
     sceneRef.current = scene;
+    scene.applyPreset(FLOWER_PRESETS[0].params);
+    scene.setPalette(FLOWER_PRESETS[0].palette);
     scene.setBloom(scene.bloomMax);
-    // Boot look is preset 0 (Aurora Rose), which mirrors the scene defaults, so
-    // resets start out pointing at it too.
+    // Boot look is preset 0 (Aurora Rose), so its shared preset values are also
+    // the source of truth for the initial mesh and reset baseline.
     scene.setResetBaseline(FLOWER_PRESETS[0].params);
 
     // Touch devices have no wheel and no Opt key, so give them OrbitControls'
