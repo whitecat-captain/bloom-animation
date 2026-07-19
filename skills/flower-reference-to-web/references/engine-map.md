@@ -1,6 +1,6 @@
 # Current engine map
 
-Read this before mapping a reference image to code. The shared engine is `components/flower/flowerScene.ts`.
+Read this before mapping a reference image to code. In a project created from the bundled template, the shared engine is `components/flower/flowerScene.ts`, the `FlowerConfig` type lives in `components/flower/flowerConfig.ts`, and generated flowers live one-per-file under `components/flower/generated/`. Register and order them in `components/flower/generated/index.ts`.
 
 ## Reliable visual levers
 

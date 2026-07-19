@@ -2,53 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createFlowerScene, type FlowerSceneApi } from "./flowerScene";
-
-const ROSE_PRESET = {
-  numPetals: 46,
-  goldenAngle: 137.5,
-  outwardPush: true,
-  radius: 0.145,
-  radiusBias: 1.5,
-  height: 0.19,
-  heightBias: 1.45,
-  scaleInner: 0.25,
-  tiltInner: 0.18,
-  outAngle: 76,
-  tiltBias: 2.7,
-  transition: 0.38,
-  curlClosed: 1.72,
-  curlOpen: -0.25,
-  curlBias: 2.5,
-  propagation: 1.2,
-  petalLen: 1.06,
-  w0: 0.17,
-  w1: 0.36,
-  w2: 0.4,
-  w3: 0.34,
-  w4: 0.14,
-  cup: 0.66,
-  sideCurl: 0.38,
-  wrapWidth: 0.25,
-  wrapCup: 0.38,
-  waveAmp: 0.008,
-  asym: 0.1,
-  jitter: 0.045,
-  noiseAmp: 0.025,
-  noiseFreq: 5,
-  shellGap: 0.12,
-  windAmp: 0.08,
-  windSpeed: 1.1,
-  windHeading: 25,
-  flat: false,
-};
-
-const CRIMSON_PALETTE: [number, number, number][] = [
-  [0.34, 0.008, 0.018],
-  [0.62, 0.018, 0.035],
-  [0.84, 0.07, 0.075],
-  [1.0, 0.24, 0.15],
-  [0.48, 0.006, 0.028],
-];
+import { CRIMSON_ROSE_CONFIG } from "./generated/crimsonRose";
 
 export default function ReferenceRoseCanvas() {
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -64,11 +18,12 @@ export default function ReferenceRoseCanvas() {
       flowerGroupY: 0.6,
     });
     sceneRef.current = scene;
-    scene.applyPreset(ROSE_PRESET);
-    scene.setPalette(CRIMSON_PALETTE);
-    scene.setAnimation("bloomMax", 0.8);
+    scene.applyPreset(CRIMSON_ROSE_CONFIG.params);
+    scene.setPalette(CRIMSON_ROSE_CONFIG.palette);
     scene.setBloom(0.74);
-    scene.setCameraView([0.55, 2.85, 3.45]);
+    if (CRIMSON_ROSE_CONFIG.camera) {
+      scene.setCameraView(CRIMSON_ROSE_CONFIG.camera);
+    }
 
     return () => {
       scene.dispose();

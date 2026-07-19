@@ -1,4 +1,4 @@
 interface:
   display_name: "Flower Reference to Web"
-  short_description: "Turn a flower reference into an interactive web flower."
-  default_prompt: "Use $flower-reference-to-web to turn this flower reference into an interactive web flower."
+  short_description: "Turn a flower reference into a reusable Studio flower."
+  default_prompt: "Use $flower-reference-to-web to add or update this flower in my reusable Studio."

@@ -28,6 +28,8 @@ import StudioDesignPane, {
 } from "./StudioDesignPane";
 import StudioExportPane from "./StudioExportPane";
 import WindPreview from "./WindPreview";
+import type { FlowerConfig } from "./flowerConfig";
+import { GENERATED_FLOWERS } from "./generated";
 
 type BgMode = "transparent" | "solid";
 
@@ -279,6 +281,16 @@ const FLOWER_PRESETS: FlowerPreset[] = [
   },
 ];
 
+const STUDIO_FLOWERS: FlowerConfig[] = [
+  ...GENERATED_FLOWERS,
+  ...FLOWER_PRESETS.map((preset, index) => ({
+    id: `legacy-preset-${index}`,
+    source: "preset" as const,
+    ...preset,
+    palette: preset.palette as FlowerConfig["palette"],
+  })),
+];
+
 function timestamp() {
   return new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 }
@@ -290,12 +302,10 @@ export default function StudioCanvas() {
 
   const [bgMode, setBgMode] = useState<BgMode>("solid");
   const [color, setColor] = useState("#000000");
-  // Aurora Rose (index 0) mirrors the scene's boot defaults, so it starts
-  // selected. The palette is deliberately its own state, decoupled from the
-  // preset: picking a preset seeds it, then each stop is editable on its own.
+  // Skill-generated flowers use the same loading path as legacy presets.
   const [selectedPreset, setSelectedPreset] = useState(0);
   const [palette, setPalette] = useState<[number, number, number][]>(
-    FLOWER_PRESETS[0].palette,
+    STUDIO_FLOWERS[0].palette,
   );
   const [duration, setDuration] = useState(5);
   const [imageRes, setImageRes] = useState(DEFAULT_RES);
@@ -471,12 +481,12 @@ export default function StudioCanvas() {
       },
     );
     sceneRef.current = scene;
-    scene.applyPreset(FLOWER_PRESETS[0].params);
-    scene.setPalette(FLOWER_PRESETS[0].palette);
+    const initialFlower = STUDIO_FLOWERS[0];
+    scene.applyPreset(initialFlower.params);
+    scene.setPalette(initialFlower.palette);
+    if (initialFlower.camera) scene.setCameraView(initialFlower.camera);
     scene.setBloom(scene.bloomMax);
-    // Boot look is preset 0 (Aurora Rose), so its shared preset values are also
-    // the source of truth for the initial mesh and reset baseline.
-    scene.setResetBaseline(FLOWER_PRESETS[0].params);
+    scene.setResetBaseline(initialFlower.params);
 
     // Touch devices have no wheel and no Opt key, so give them OrbitControls'
     // native two-finger pinch-zoom (dolly). Desktop keeps zoom off and uses the
@@ -714,7 +724,7 @@ export default function StudioCanvas() {
   // A preset is a whole flower: geometry patch + palette seed. The scene
   // notifies the shape/design state back, which refreshes every pane binding.
   function handlePresetChange(index: number) {
-    const preset = FLOWER_PRESETS[index];
+    const preset = STUDIO_FLOWERS[index];
     if (!preset) return;
     setSelectedPreset(index);
     setPalette(preset.palette);
@@ -724,6 +734,7 @@ export default function StudioCanvas() {
     if (!scene) return;
     scene.applyPreset(preset.params);
     scene.setPalette(preset.palette);
+    if (preset.camera) scene.setCameraView(preset.camera);
     // Every reset (all / geometry / arrangement / wind / detail) now returns to
     // THIS flower's params, not the boot rose.
     scene.setResetBaseline(preset.params);
@@ -891,7 +902,7 @@ export default function StudioCanvas() {
               pane={sheetPages.design}
               shape={petalShape}
               designState={designState}
-              presets={FLOWER_PRESETS}
+              presets={STUDIO_FLOWERS}
               selectedPreset={selectedPreset}
               palette={palette}
               outlineEditor={outlineEditor}
