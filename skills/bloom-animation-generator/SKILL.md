@@ -1,9 +1,9 @@
 ---
-name: flower-reference-to-web
-description: Turn a user-supplied flower photo or illustration into an editable, previewable, and exportable flower in the reusable Flower Studio bundled with this Skill. Use when a user wants to generate, reinterpret, refine, preview, or export a flower from a visual reference rather than manually edit a fixed preset; automatically prepare and start Studio without asking the user about project folders, Next.js, npm, or source-code setup.
+name: bloom-animation-generator
+description: Turn a user-supplied flower photo or illustration into an editable, previewable, and exportable bloom animation in the reusable Flower Studio bundled with this Skill. Use when a user wants to generate, interpret, refine, preview, or export an animated flower from a visual reference rather than manually edit a fixed preset; automatically prepare and start Studio without asking the user about project folders, Next.js, npm, or source-code setup.
 ---
 
-# Flower Reference to Web
+# Bloom Animation Generator
 
 Create or update a complete `FlowerConfig` from a flower reference and load it into the Studio bundled with this Skill. Run that Studio in place; never copy its application source for a generated flower.
 

@@ -8,7 +8,7 @@ import shutil
 from pathlib import Path
 
 
-SKILL_NAME = "flower-reference-to-web"
+SKILL_NAME = "bloom-animation-generator"
 
 
 def default_skills_dir() -> Path:
@@ -55,7 +55,7 @@ def install(source: Path, destination: Path, copy: bool) -> None:
         method = "Linked"
 
     print(f"{method} {SKILL_NAME} to {destination}")
-    print("Start a new agent task, attach a flower image, and invoke flower-reference-to-web.")
+    print("Start a new agent task, attach a flower image, and invoke bloom-animation-generator.")
 
 
 def main() -> None:
@@ -63,7 +63,7 @@ def main() -> None:
     source = repo_root / "skills" / SKILL_NAME
 
     parser = argparse.ArgumentParser(
-        description="Install the flower-reference-to-web Agent Skill from this clone."
+        description="Install the bloom-animation-generator Agent Skill from this clone."
     )
     parser.add_argument(
         "--copy",
