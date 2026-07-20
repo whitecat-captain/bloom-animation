@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bloom Animation Generator"
+  short_description: "Create an editable bloom animation from a flower image."
+  default_prompt: "Use $bloom-animation-generator to turn this reference image into an editable bloom animation in Flower Studio."

@@ -1,0 +1,132 @@
+.reference-rose {
+  min-height: 100svh;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: #fff7ef;
+  background:
+    radial-gradient(circle at 52% 46%, rgba(137, 18, 25, 0.22), transparent 30%),
+    radial-gradient(circle at 14% 84%, rgba(35, 73, 43, 0.19), transparent 28%),
+    linear-gradient(140deg, #0d0709 4%, #17080c 52%, #080707 100%);
+}
+
+.reference-rose__canvas {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+
+.reference-rose__canvas canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.reference-rose__heading {
+  position: absolute;
+  top: clamp(1.5rem, 4vw, 3.5rem);
+  left: clamp(1.5rem, 5vw, 5rem);
+  display: grid;
+  gap: 0.35rem;
+  pointer-events: none;
+}
+
+.reference-rose__heading p,
+.reference-rose__heading span {
+  margin: 0;
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 235, 222, 0.58);
+}
+
+.reference-rose__heading h1 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.6rem, 7vw, 5.5rem);
+  font-weight: 400;
+  letter-spacing: -0.055em;
+  line-height: 0.94;
+}
+
+.reference-rose__controls {
+  position: absolute;
+  right: clamp(1rem, 3vw, 2.5rem);
+  bottom: clamp(1rem, 3vw, 2.5rem);
+  display: grid;
+  grid-template-columns: auto minmax(9rem, 12rem) minmax(9rem, 12rem) auto;
+  align-items: end;
+  gap: 0.9rem;
+  max-width: calc(100vw - 2rem);
+  padding: 0.9rem;
+  border: 1px solid rgba(255, 232, 218, 0.16);
+  border-radius: 1.15rem;
+  background: rgba(31, 11, 14, 0.57);
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(18px) saturate(130%);
+}
+
+.reference-rose__controls label {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem 0.7rem;
+  font-size: 0.69rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 237, 226, 0.74);
+}
+
+.reference-rose__controls output {
+  color: #ff8e78;
+}
+
+.reference-rose__controls input {
+  grid-column: 1 / -1;
+  width: 100%;
+  accent-color: #df493e;
+}
+
+.reference-rose__controls button {
+  min-height: 2.6rem;
+  border: 1px solid rgba(255, 232, 218, 0.2);
+  border-radius: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  color: #fff3eb;
+  background: rgba(255, 234, 222, 0.07);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.reference-rose__controls button:hover,
+.reference-rose__controls button:focus-visible,
+.reference-rose__breeze.is-active {
+  border-color: rgba(255, 150, 125, 0.72);
+  background: rgba(193, 47, 43, 0.34);
+}
+
+.reference-rose__controls button:active {
+  transform: translateY(1px);
+}
+
+.reference-rose__bloom span {
+  margin-right: 0.28rem;
+  color: #ff8e78;
+}
+
+@media (max-width: 760px) {
+  .reference-rose__controls {
+    left: 1rem;
+    right: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .reference-rose__controls label {
+    min-width: 0;
+  }
+}
