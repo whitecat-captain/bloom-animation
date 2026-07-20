@@ -1,6 +1,6 @@
 # Current engine map
 
-Read this before mapping a reference image to data. The bundled Studio engine is `assets/studio-template/components/flower/flowerScene.ts`, and the `FlowerConfig` type is `assets/studio-template/components/flower/flowerConfig.ts`. Built-in examples live under `components/flower/generated/`; never add user flowers there. Persist user flowers through `scripts/upsert_flower.py`, which writes the shared `flowers.json` data store consumed by Studio at runtime.
+Read this before mapping a reference image to data. The bundled Studio engine is `studio/components/flower/flowerScene.ts`, and the `FlowerConfig` type is `studio/components/flower/flowerConfig.ts`. Built-in flowers live under `studio/components/flower/generated/` and `studio/components/flower/presets/`; never add user flowers there. Persist user flowers through `scripts/upsert_flower.py`, which writes the shared `flowers.json` data store consumed by Studio at runtime.
 
 ## Reliable visual levers
 

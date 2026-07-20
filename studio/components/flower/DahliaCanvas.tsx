@@ -2,6 +2,7 @@
 
 import FlowerDeck from "./FlowerDeck";
 import type { FlowerSceneApi } from "./flowerScene";
+import { CRIMSON_PALETTE } from "./palettes";
 
 // ============================================================================
 // Scarlet ball-dahlia showcase.
@@ -59,15 +60,6 @@ const DAHLIA_PRESET = {
   flat: false, // soft Lambert + subsurface so the dense ball reads in 3D
 };
 
-// Five-stop ramp, pale tip / outer ring -> dark burgundy core.
-const DAHLIA_PALETTE: [number, number, number][] = [
-  [0.984, 0.706, 0.737], // #fbb4bc tip
-  [1.0, 0.435, 0.506], // #ff6f81 outer
-  [0.773, 0.094, 0.2], // #c51833 mid
-  [0.451, 0.02, 0.102], // #73051a inner
-  [0.239, 0.012, 0.071], // #3d0312 core
-];
-
 export default function DahliaCanvas() {
   return (
     <FlowerDeck
@@ -75,7 +67,7 @@ export default function DahliaCanvas() {
       initialInstances={DAHLIA_PRESET.numPetals}
       customizeScene={(scene: FlowerSceneApi) => {
         scene.applyPreset(DAHLIA_PRESET);
-        scene.setPalette(DAHLIA_PALETTE);
+        scene.setPalette(CRIMSON_PALETTE);
         // Frame the bloom nearly side-on (slightly above), like the photo, so
         // the recurving outer petals that droop down the sides stay visible.
         scene.setCameraView([0.3, 2.5, 3.95]);

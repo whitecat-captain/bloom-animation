@@ -11,7 +11,7 @@ from pathlib import Path
 
 
 def studio_dir() -> Path:
-    return Path(__file__).resolve().parent.parent / "assets" / "studio-template"
+    return Path(__file__).resolve().parent.parent / "studio"
 
 
 def dependency_fingerprint(project: Path) -> str:

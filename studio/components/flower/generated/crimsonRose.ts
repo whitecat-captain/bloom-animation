@@ -1,4 +1,5 @@
 import type { FlowerConfig } from "../flowerConfig";
+import { CRIMSON_PALETTE } from "../palettes";
 
 export const CRIMSON_ROSE_CONFIG: FlowerConfig = {
   id: "crimson-rose",
@@ -47,11 +48,5 @@ export const CRIMSON_ROSE_CONFIG: FlowerConfig = {
     windHeading: 25,
     flat: false,
   },
-  palette: [
-    [0.34, 0.008, 0.018],
-    [0.62, 0.018, 0.035],
-    [0.84, 0.07, 0.075],
-    [1.0, 0.24, 0.15],
-    [0.48, 0.006, 0.028],
-  ],
+  palette: CRIMSON_PALETTE,
 };

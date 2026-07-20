@@ -4,7 +4,7 @@ Turn a flower reference into a procedural, editable, and exportable bloom animat
 
 Upload a reference image, ask the Skill to create a flower from it, and continue in the bundled Flower Studio. The Studio, flower engine, controls, and exporter are already included in this repository; each new flower is saved as data instead of creating another Next.js project.
 
-![Flower Studio demo](./skills/bloom-animation-generator/assets/studio-template/public/bloom-animation-generator-demo.gif)
+![Flower Studio demo](./studio/public/bloom-animation-generator-demo.gif)
 
 ## Install
 
@@ -14,7 +14,7 @@ The simplest way is to paste this into a conversation with Codex, Claude Code, C
 
 ```text
 Install the bloom-animation-generator Agent Skill from
-https://github.com/whitecat-captain/bloom-animation/tree/main/skills/bloom-animation-generator
+https://github.com/whitecat-captain/bloom-animation
 ```
 
 Your agent can place the Skill in the location it supports. If the Skill does not appear immediately, start a new conversation or restart the agent.
@@ -46,13 +46,12 @@ The engine is a visual translator rather than a botanical reconstruction system.
 ## What is included
 
 ```text
-skills/bloom-animation-generator/
-├── SKILL.md                  # Workflow and visual constraints
-├── agents/openai.yaml        # Codex presentation metadata
-├── references/               # FlowerSpec and engine capability maps
-├── scripts/                  # Flower storage and Studio runtime helpers
-├── examples/                 # Tested reference translations
-└── assets/studio-template/   # Reusable Studio, flower engine, and exporter
+SKILL.md              # Workflow and visual constraints
+agents/               # Agent presentation metadata
+references/           # FlowerSpec and engine capability maps
+examples/             # Tested reference translations
+scripts/              # Installation, storage, and runtime helpers
+studio/                # Reusable Studio, flower engine, and exporter
 ```
 
 The bundled Next.js application is the reusable runtime and demo—not an application template copied for every result. Generated flowers are stored separately from the Skill, so updating the repository does not erase them.
@@ -75,13 +74,13 @@ The Skill uses the open `SKILL.md` Agent Skills format, but the complete workflo
 The Skill normally prepares and opens Studio automatically. To run the included demo yourself:
 
 ```bash
-npm install --prefix skills/bloom-animation-generator/assets/studio-template
-npm run dev --prefix skills/bloom-animation-generator/assets/studio-template
+npm install --prefix studio
+npm run dev --prefix studio
 ```
 
 Then open `http://localhost:3000/studio`.
 
-An existing hosted demo is available at [bloom-animation-mu.vercel.app](https://bloom-animation-mu.vercel.app). For a new Vercel project, set the Root Directory to `skills/bloom-animation-generator/assets/studio-template`.
+An existing hosted demo is available at [bloom-animation-mu.vercel.app](https://bloom-animation-mu.vercel.app). For a new Vercel project, set the Root Directory to `studio`.
 
 ## Update or remove
 

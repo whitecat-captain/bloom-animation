@@ -58,7 +58,7 @@ For a tested compact-rosette translation, consult [examples/crimson-rose/flower-
 ### 4. Build the Studio configuration
 
 1. Fingerprint a reachable reference with `python3 scripts/fingerprint_reference.py <reference>`.
-2. Build one JSON object compatible with the `FlowerConfig` shape in `assets/studio-template/components/flower/flowerConfig.ts`. Give it a stable kebab-case `id`, a human-readable name, `source: "generated"`, reference metadata, params, palette, and optional camera.
+2. Build one JSON object compatible with the `FlowerConfig` shape in `studio/components/flower/flowerConfig.ts`. Give it a stable kebab-case `id`, a human-readable name, `source: "generated"`, reference metadata, params, palette, and optional camera.
 3. Write that object to a temporary JSON file, then run `python3 scripts/upsert_flower.py <temporary-json>`. The script updates the same fingerprint or stable ID and otherwise prepends a new flower in the persistent data store.
 4. Do not create TypeScript files, modify the generated registry, or copy application code for a user flower. Built-in examples may remain compiled into Studio; user flowers must remain external data.
 5. Reuse the full Studio design, preview, and export controls. Treat export as a core outcome, not an optional advanced mode.

@@ -36,9 +36,12 @@ def install(source: Path, destination: Path, copy: bool) -> None:
             source,
             destination,
             ignore=shutil.ignore_patterns(
+                ".git",
+                ".claude",
                 "node_modules",
                 ".next",
                 ".flower-studio-dependencies",
+                "hyperframes-video",
                 "*.tsbuildinfo",
                 ".DS_Store",
             ),
@@ -60,7 +63,7 @@ def install(source: Path, destination: Path, copy: bool) -> None:
 
 def main() -> None:
     repo_root = Path(__file__).resolve().parent.parent
-    source = repo_root / "skills" / SKILL_NAME
+    source = repo_root
 
     parser = argparse.ArgumentParser(
         description="Install the bloom-animation-generator Agent Skill from this clone."
