@@ -9,7 +9,7 @@ Create or update a complete `FlowerConfig` from a flower reference and load it i
 
 ## Product contract
 
-Deliver one flower that feels like the reference and is pleasant before the user touches any controls. It must open inside the full Studio so the user can refine, preview, and export it with the project's existing capabilities.
+Deliver one flower that feels like the reference and is pleasant before the user touches any controls. Open it in Studio's Quick view for light result-level adjustments, with Advanced design controls one click away and the complete export workflow unchanged.
 
 Reuse one bundled Studio for every flower. Persist user flowers as data outside the installed Skill so Skill updates do not erase them.
 
@@ -59,13 +59,13 @@ Start from the closest existing family only as a seed. Do not expose the old pre
 2. Build one JSON object compatible with the `FlowerConfig` shape in `studio/components/flower/flowerConfig.ts`. Give it a stable kebab-case `id`, a human-readable name, `source: "generated"`, reference metadata, params, palette, and optional camera.
 3. Write that object to a temporary JSON file, then run `python3 scripts/upsert_flower.py <temporary-json>`. The script updates the same fingerprint or stable ID and otherwise prepends a new flower in the persistent data store.
 4. Do not create TypeScript files, modify the built-in preset registry, or copy application code for a user flower. User flowers must remain external data.
-5. Reuse the full Studio design, preview, and export controls. Treat export as a core outcome, not an optional advanced mode.
-6. Do not add a simplified result panel between the generated flower and Studio.
+5. Open Studio on its default Quick tab. Keep the Quick controls limited to flower selection, bounded fullness, the five-stop palette, movement strength, bloom preview/replay, and restoring the generated result.
+6. Keep the complete Advanced design tab available without duplicating flower state. Keep Export as a top-level tab and treat it as a core outcome, not an advanced option.
 
 ### 5. Verify the result
 
 1. Run `python3 scripts/start_studio.py` and use the returned local Studio URL. Reuse an already running Studio automatically.
-2. Open Studio in a browser. Confirm the saved flower is selected and visible on load, Studio controls change the intended properties, bloom can replay, and export controls remain available.
+2. Open Studio in a browser. Confirm the saved flower is selected and visible on the default Quick tab, Quick adjustments affect the same flower shown in Advanced, bloom can replay, and the complete Export tab remains available.
 3. If the output looks unlike the reference, revise the JSON configuration and run `upsert_flower.py` again before adding more controls.
 
 ## Non-negotiable constraints
@@ -75,11 +75,11 @@ Start from the closest existing family only as a seed. Do not expose the old pre
 - Do not store user-generated flowers in installed Skill source files.
 - Do not duplicate a flower when the same reference fingerprint or stable flower ID already exists.
 - Do not claim support for a visual feature the engine cannot generate.
-- Do not create a separate generated page or reduced result panel when Studio already provides the required interaction and export workflow.
-- Do not hide or demote Studio's export capability behind a non-essential intermediate interface.
+- Do not create a separate generated page or a second reduced application. Use Studio's built-in Quick tab as the result-level adjustment layer.
+- Do not remove the Advanced tab or hide or demote Export behind a non-essential intermediate interface.
 - Do not erase working demo routes or legacy preset code without an explicit request.
 - Do not use an image's species name as sufficient evidence for its geometry; inspect its visible form.
 
 ## Handoff
 
-Lead with the opened flower. State its structural interpretation, important controls, and intentional approximations. Do not mention data paths or implementation files unless the user asks.
+Lead with the opened flower and its Quick controls. Mention Advanced only as the optional path for deeper edits, then state intentional approximations. Do not mention data paths or implementation files unless the user asks.

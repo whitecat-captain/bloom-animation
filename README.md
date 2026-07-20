@@ -37,7 +37,7 @@ Attach a flower image and ask:
 Use the bloom-animation-generator skill to turn this reference image into an editable bloom animation in Flower Studio.
 ```
 
-The Skill inspects the visible structure, palette, and opening state; translates them into the existing procedural flower system; saves the flower; and opens the bundled Studio for refinement and export.
+The Skill inspects the visible structure, palette, and opening state; translates them into the existing procedural flower system; saves the flower; and opens the bundled Studio on a focused Quick view. Full design controls remain available under Advanced, while Export keeps the complete image and animation workflow.
 
 On first use, it may spend a little longer preparing Flower Studio. There is no destination folder to choose, no new web project to create, and no separate dependency setup to complete. Later flowers reuse the same Studio and remain available alongside earlier results.
 

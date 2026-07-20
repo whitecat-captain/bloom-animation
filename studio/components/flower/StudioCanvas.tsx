@@ -27,14 +27,16 @@ import StudioDesignPane, {
   type WindKey,
 } from "./StudioDesignPane";
 import StudioExportPane from "./StudioExportPane";
+import StudioQuickPane from "./StudioQuickPane";
 import WindPreview from "./WindPreview";
-import type { FlowerConfig } from "./flowerConfig";
+import type { FlowerConfig, FlowerPalette } from "./flowerConfig";
 import { PRESET_FLOWERS } from "./presets";
 
 type BgMode = "transparent" | "solid";
 
 type StudioSheetPages = {
-  design: TabPageApi;
+  quick: TabPageApi;
+  advanced: TabPageApi;
   export: TabPageApi;
 };
 
@@ -106,6 +108,13 @@ const DEFAULT_DESIGN_STATE: FlowerDesignState = {
 
 const BUILT_IN_STUDIO_FLOWERS: FlowerConfig[] = PRESET_FLOWERS;
 
+function flowerPetalCount(flower: FlowerConfig) {
+  const count = flower.params.numPetals;
+  return typeof count === "number"
+    ? count
+    : DEFAULT_DESIGN_STATE.phyllotaxis.numPetals;
+}
+
 function applyFlower(scene: FlowerSceneApi, flower: FlowerConfig) {
   scene.applyPreset(flower.params);
   scene.setPalette(flower.palette);
@@ -128,8 +137,11 @@ export default function StudioCanvas() {
   // Skill-generated flowers use the same loading path as legacy presets.
   const [studioFlowers, setStudioFlowers] = useState(BUILT_IN_STUDIO_FLOWERS);
   const [selectedPreset, setSelectedPreset] = useState(0);
-  const [palette, setPalette] = useState<[number, number, number][]>(
+  const [palette, setPalette] = useState<FlowerPalette>(
     BUILT_IN_STUDIO_FLOWERS[0].palette,
+  );
+  const [quickPetalBaseline, setQuickPetalBaseline] = useState(
+    flowerPetalCount(BUILT_IN_STUDIO_FLOWERS[0]),
   );
   const [duration, setDuration] = useState(5);
   const [imageRes, setImageRes] = useState(DEFAULT_RES);
@@ -319,6 +331,7 @@ export default function StudioCanvas() {
         setStudioFlowers(nextFlowers);
         setSelectedPreset(0);
         setPalette(nextFlowers[0].palette);
+        setQuickPetalBaseline(flowerPetalCount(nextFlowers[0]));
 
         const scene = sceneRef.current;
         if (scene) applyFlower(scene, nextFlowers[0]);
@@ -407,12 +420,17 @@ export default function StudioCanvas() {
       expanded: true,
     });
     const tab = pane.addTab({
-      pages: [{ title: "DESIGN" }, { title: "EXPORT" }],
+      pages: [
+        { title: "QUICK" },
+        { title: "ADVANCED" },
+        { title: "EXPORT" },
+      ],
     });
 
     setSheetPages({
-      design: tab.pages[0],
-      export: tab.pages[1],
+      quick: tab.pages[0],
+      advanced: tab.pages[1],
+      export: tab.pages[2],
     });
 
     return () => {
@@ -600,6 +618,7 @@ export default function StudioCanvas() {
     if (!preset) return;
     setSelectedPreset(index);
     setPalette(preset.palette);
+    setQuickPetalBaseline(flowerPetalCount(preset));
     stopExportPreview();
     stopDesignPreview();
     const scene = sceneRef.current;
@@ -619,10 +638,25 @@ export default function StudioCanvas() {
     setPalette((stops) => {
       const next = stops.map((stop, i) =>
         i === index ? rgb : stop,
-      ) as [number, number, number][];
+      ) as FlowerPalette;
       sceneRef.current?.setPalette(next);
       return next;
     });
+  }
+
+  function handleQuickFullnessChange(adjustment: number) {
+    const nextPetalCount = Math.round(
+      quickPetalBaseline * (1 + adjustment / 100),
+    );
+    handlePhyllotaxisChange("numPetals", nextPetalCount);
+  }
+
+  function handleQuickMovementChange(strength: number) {
+    handleWindChange("windAmp", strength / 200);
+  }
+
+  function handleRestoreActiveFlower() {
+    handlePresetChange(selectedPreset);
   }
 
   function handleResetPetalGeometry() {
@@ -726,6 +760,18 @@ export default function StudioCanvas() {
       arrangementPreviewResetKey,
     ],
   );
+  const quickFullness = Math.min(
+    Math.max(
+      Math.round(
+        (designState.phyllotaxis.numPetals / quickPetalBaseline - 1) * 100,
+      ),
+      -25,
+    ),
+    25,
+  );
+  const quickMovement = Math.round(
+    (designState.wind.windAmp / 0.5) * 100,
+  );
 
   return (
     <div className={`studio${showCameraFrame ? " is-framing" : ""}`}>
@@ -770,8 +816,25 @@ export default function StudioCanvas() {
       <div ref={sheetRef} className="studio-sheet">
         {sheetPages && (
           <>
+            <StudioQuickPane
+              pane={sheetPages.quick}
+              presets={studioFlowers}
+              selectedPreset={selectedPreset}
+              palette={palette}
+              fullness={quickFullness}
+              movement={quickMovement}
+              previewBloom={designPreviewBloom}
+              exporting={exporting}
+              onPresetChange={handlePresetChange}
+              onPaletteChange={handlePaletteChange}
+              onFullnessChange={handleQuickFullnessChange}
+              onMovementChange={handleQuickMovementChange}
+              onPreviewBloomChange={handleDesignPreviewBloomChange}
+              onReplayBloom={playDesignPreview}
+              onRestoreResult={handleRestoreActiveFlower}
+            />
             <StudioDesignPane
-              pane={sheetPages.design}
+              pane={sheetPages.advanced}
               shape={petalShape}
               designState={designState}
               presets={studioFlowers}
