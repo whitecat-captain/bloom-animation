@@ -1,6 +1,6 @@
 # Current engine map
 
-Read this before mapping a reference image to code. In a project created from the bundled template, the shared engine is `components/flower/flowerScene.ts`, the `FlowerConfig` type lives in `components/flower/flowerConfig.ts`, and generated flowers live one-per-file under `components/flower/generated/`. Register and order them in `components/flower/generated/index.ts`.
+Read this before mapping a reference image to data. The bundled Studio engine is `assets/studio-template/components/flower/flowerScene.ts`, and the `FlowerConfig` type is `assets/studio-template/components/flower/flowerConfig.ts`. Built-in examples live under `components/flower/generated/`; never add user flowers there. Persist user flowers through `scripts/upsert_flower.py`, which writes the shared `flowers.json` data store consumed by Studio at runtime.
 
 ## Reliable visual levers
 

@@ -281,7 +281,7 @@ const FLOWER_PRESETS: FlowerPreset[] = [
   },
 ];
 
-const STUDIO_FLOWERS: FlowerConfig[] = [
+const BUILT_IN_STUDIO_FLOWERS: FlowerConfig[] = [
   ...GENERATED_FLOWERS,
   ...FLOWER_PRESETS.map((preset, index) => ({
     id: `legacy-preset-${index}`,
@@ -290,6 +290,14 @@ const STUDIO_FLOWERS: FlowerConfig[] = [
     palette: preset.palette as FlowerConfig["palette"],
   })),
 ];
+
+function applyFlower(scene: FlowerSceneApi, flower: FlowerConfig) {
+  scene.applyPreset(flower.params);
+  scene.setPalette(flower.palette);
+  if (flower.camera) scene.setCameraView(flower.camera);
+  scene.setBloom(scene.bloomMax);
+  scene.setResetBaseline(flower.params);
+}
 
 function timestamp() {
   return new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
@@ -303,9 +311,10 @@ export default function StudioCanvas() {
   const [bgMode, setBgMode] = useState<BgMode>("solid");
   const [color, setColor] = useState("#000000");
   // Skill-generated flowers use the same loading path as legacy presets.
+  const [studioFlowers, setStudioFlowers] = useState(BUILT_IN_STUDIO_FLOWERS);
   const [selectedPreset, setSelectedPreset] = useState(0);
   const [palette, setPalette] = useState<[number, number, number][]>(
-    STUDIO_FLOWERS[0].palette,
+    BUILT_IN_STUDIO_FLOWERS[0].palette,
   );
   const [duration, setDuration] = useState(5);
   const [imageRes, setImageRes] = useState(DEFAULT_RES);
@@ -457,6 +466,58 @@ export default function StudioCanvas() {
     durationRef.current = duration;
   }, [duration]);
 
+  // User flowers are small JSON records stored outside the installed Skill.
+  // Load them at runtime so Studio code is never copied or rewritten per flower.
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadUserFlowers() {
+      try {
+        const response = await fetch("/api/flowers", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (!response.ok) return;
+        const payload = (await response.json()) as { flowers?: FlowerConfig[] };
+        if (!Array.isArray(payload.flowers) || payload.flowers.length === 0) return;
+
+        const userFlowers = payload.flowers.filter(
+          (flower) =>
+            flower &&
+            typeof flower.id === "string" &&
+            typeof flower.name === "string" &&
+            flower.source === "generated" &&
+            Array.isArray(flower.palette) &&
+            flower.palette.length === 5 &&
+            flower.params &&
+            typeof flower.params === "object",
+        );
+        if (userFlowers.length === 0) return;
+
+        const userIds = new Set(userFlowers.map((flower) => flower.id));
+        const nextFlowers = [
+          ...userFlowers,
+          ...BUILT_IN_STUDIO_FLOWERS.filter(
+            (flower) => !userIds.has(flower.id),
+          ),
+        ];
+        setStudioFlowers(nextFlowers);
+        setSelectedPreset(0);
+        setPalette(nextFlowers[0].palette);
+
+        const scene = sceneRef.current;
+        if (scene) applyFlower(scene, nextFlowers[0]);
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          console.warn("Could not load saved flowers", error);
+        }
+      }
+    }
+
+    void loadUserFlowers();
+    return () => controller.abort();
+  }, []);
+
   // Clean up any running preview loop on unmount.
   useEffect(() => () => {
     stopExportPreview();
@@ -481,12 +542,8 @@ export default function StudioCanvas() {
       },
     );
     sceneRef.current = scene;
-    const initialFlower = STUDIO_FLOWERS[0];
-    scene.applyPreset(initialFlower.params);
-    scene.setPalette(initialFlower.palette);
-    if (initialFlower.camera) scene.setCameraView(initialFlower.camera);
-    scene.setBloom(scene.bloomMax);
-    scene.setResetBaseline(initialFlower.params);
+    const initialFlower = BUILT_IN_STUDIO_FLOWERS[0];
+    applyFlower(scene, initialFlower);
 
     // Touch devices have no wheel and no Opt key, so give them OrbitControls'
     // native two-finger pinch-zoom (dolly). Desktop keeps zoom off and uses the
@@ -724,7 +781,7 @@ export default function StudioCanvas() {
   // A preset is a whole flower: geometry patch + palette seed. The scene
   // notifies the shape/design state back, which refreshes every pane binding.
   function handlePresetChange(index: number) {
-    const preset = STUDIO_FLOWERS[index];
+    const preset = studioFlowers[index];
     if (!preset) return;
     setSelectedPreset(index);
     setPalette(preset.palette);
@@ -902,7 +959,7 @@ export default function StudioCanvas() {
               pane={sheetPages.design}
               shape={petalShape}
               designState={designState}
-              presets={STUDIO_FLOWERS}
+              presets={studioFlowers}
               selectedPreset={selectedPreset}
               palette={palette}
               outlineEditor={outlineEditor}

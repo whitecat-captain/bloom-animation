@@ -1,17 +1,29 @@
 ---
 name: flower-reference-to-web
-description: Turn a user-supplied flower reference image into a Studio-ready FlowerConfig in the Flower repository. Use when a user wants to generate, reinterpret, refine, preview, or export a flower from a photo or illustration rather than manually edit a fixed preset; preserve the image's visual character while working within the repository's procedural flower engine and full Studio workflow.
+description: Turn a user-supplied flower photo or illustration into an editable, previewable, and exportable flower in the reusable Flower Studio bundled with this Skill. Use when a user wants to generate, reinterpret, refine, preview, or export a flower from a visual reference rather than manually edit a fixed preset; automatically prepare and start Studio without asking the user about project folders, Next.js, npm, or source-code setup.
 ---
 
 # Flower Reference to Web
 
-Create or update a complete `FlowerConfig` from a flower reference and load it directly into one reusable Studio project. Treat the procedural engine and Studio as a long-lived flower workspace; do not create a Next.js project for every invocation.
+Create or update a complete `FlowerConfig` from a flower reference and load it into the Studio bundled with this Skill. Run that Studio in place; never copy its application source for a generated flower.
 
 ## Product contract
 
 Deliver one flower that feels like the reference and is pleasant before the user touches any controls. It must open inside the full Studio so the user can refine, preview, and export it with the project's existing capabilities.
 
-Reuse one Studio for many flowers. Create a new Studio only when no compatible project exists or when the user explicitly requests an independent project.
+Reuse one bundled Studio for every flower. Persist user flowers as data outside the installed Skill so Skill updates do not erase them.
+
+## Interaction contract
+
+Treat the user as a designer, not a developer. On the normal path:
+
+- Do not ask where to create Studio. There is no separate Studio project to create.
+- Do not ask the user to run commands or install dependencies.
+- Do not expose Next.js, npm, source paths, `FlowerConfig`, or project-directory decisions.
+- Describe first-run work as “Preparing your Flower Studio.” It may take longer once; continue without requesting confirmation.
+- Open the finished Studio and lead with the visual result. Keep technical implementation details out of the handoff unless the user asks.
+
+If setup genuinely fails, explain the problem in plain language and offer one concrete next action. Show terminal commands only when the user asks for technical steps.
 
 The engine is a visual translator, not a botanical reconstruction system. Never promise an exact biological model. For a feature that the engine cannot express, preserve the reference's overall impression and record the approximation in the flower spec.
 
@@ -20,17 +32,15 @@ The engine is a visual translator, not a botanical reconstruction system. Never 
 ### 1. Inspect before deciding
 
 1. Inspect the supplied image at full resolution. If no reference image is attached or reachable, ask for it before generating the flower.
-2. Read [references/flower-spec.md](references/flower-spec.md), then create a concise `FlowerSpec` in the working notes or the generated project.
+2. Read [references/flower-spec.md](references/flower-spec.md), then create a concise `FlowerSpec` in the working notes.
 3. Read [references/engine-map.md](references/engine-map.md) before choosing values or changing the flower engine.
 
-### 2. Prepare the Studio project
+### 2. Prepare the bundled Studio
 
-1. Run `python3 scripts/resolve_studio_project.py --start <current-directory> --search-root <workspace-root>` from this skill directory.
-2. Reuse the resolved project and register it with `python3 scripts/resolve_studio_project.py --register <project>` so later tasks find it. If multiple projects are reported, ask which one to use before registering anything.
-3. If none exists, ask where the user's reusable Flower Studio should live, then run `python3 scripts/create_flower_project.py <destination> --install`. This creates and registers the default Studio.
-4. Create another Next.js project only when the user explicitly requests an independent project. Use `--no-register` unless they also want it to become the new default.
-5. If Node.js or npm is unavailable, explain that Studio requires Node.js 20.9 or newer. Do not edit the installed template in place.
-6. Inspect the narrowest project files needed for the task. Read the relevant guide under `node_modules/next/dist/docs/` before changing Next.js application code.
+1. Run `python3 scripts/prepare_studio.py` from this skill directory. This prepares the bundled Studio in place and does not copy its source.
+2. Continue automatically during first-run preparation. Do not ask for a destination or describe the internal dependency setup.
+3. If preparation fails, explain only that Flower Studio could not finish preparing on this computer and offer to help fix it. Do not lead with package-manager terminology.
+4. Do not change Studio application source during normal flower generation. Only change it when the user explicitly asks to develop the engine or interface.
 
 ### 3. Translate the reference
 
@@ -43,29 +53,28 @@ Classify the image by visible structure, never by botanical name alone:
 
 Start from the closest existing family only as a seed. Do not expose the old preset picker as the user-facing way to create the flower.
 
-For a tested compact-rosette translation, consult [examples/crimson-rose/flower-spec.md](examples/crimson-rose/flower-spec.md).
+For a tested compact-rosette translation, consult [examples/crimson-rose/flower-spec.md](examples/crimson-rose/flower-spec.md) and its matching [flower-config.json](examples/crimson-rose/flower-config.json).
 
 ### 4. Build the Studio configuration
 
 1. Fingerprint a reachable reference with `python3 scripts/fingerprint_reference.py <reference>`.
-2. Search `components/flower/generated/` for the same `reference.fingerprint`, then for the intended stable flower `id`. If either matches, update that existing config instead of creating a duplicate. If identity is ambiguous, ask whether to update or add.
-3. Keep each generated flower in its own `components/flower/generated/<flowerName>.ts` file as a typed `FlowerConfig`. Give it a stable kebab-case `id`, a human-readable name, and reference metadata when available.
-4. Export every generated flower from `components/flower/generated/index.ts`. Put the flower created or updated in this invocation first so Studio selects it on load; keep all older flowers in the array.
-5. Reuse or extend the procedural scene. Do not scatter flower-specific magic values through page components or duplicate a page.
-6. Reuse the full Studio design, preview, and export controls. Treat export as a core outcome, not an optional advanced mode.
-7. Do not add a simplified result panel between the generated flower and Studio. Keep existing Landing, Studio, and demo routes operational unless the user explicitly asks otherwise.
+2. Build one JSON object compatible with the `FlowerConfig` shape in `assets/studio-template/components/flower/flowerConfig.ts`. Give it a stable kebab-case `id`, a human-readable name, `source: "generated"`, reference metadata, params, palette, and optional camera.
+3. Write that object to a temporary JSON file, then run `python3 scripts/upsert_flower.py <temporary-json>`. The script updates the same fingerprint or stable ID and otherwise prepends a new flower in the persistent data store.
+4. Do not create TypeScript files, modify the generated registry, or copy application code for a user flower. Built-in examples may remain compiled into Studio; user flowers must remain external data.
+5. Reuse the full Studio design, preview, and export controls. Treat export as a core outcome, not an optional advanced mode.
+6. Do not add a simplified result panel between the generated flower and Studio.
 
 ### 5. Verify the result
 
-1. Run `npx tsc --noEmit`, `npm run lint`, `npm run build`, and `git diff --check` when the project is a Git checkout.
-2. Open Studio in a browser when possible. Confirm the generated flower is selected and visible on load, Studio controls change the intended properties, bloom can replay, and export controls remain available.
-3. If the output looks unlike the reference, revise the structural family or core parameters before adding more controls.
+1. Run `python3 scripts/start_studio.py` and use the returned local Studio URL. Reuse an already running Studio automatically.
+2. Open Studio in a browser. Confirm the saved flower is selected and visible on load, Studio controls change the intended properties, bloom can replay, and export controls remain available.
+3. If the output looks unlike the reference, revise the JSON configuration and run `upsert_flower.py` again before adding more controls.
 
 ## Non-negotiable constraints
 
 - Do not use a downloaded 3D flower model or fake the result with a static reference image.
-- Do not modify files inside the installed skill. Create or use a separate Studio project.
-- Do not create a new Next.js project merely because the Skill was invoked again.
+- Do not copy the bundled Studio or create another Next.js project.
+- Do not store user-generated flowers in installed Skill source files.
 - Do not duplicate a flower when the same reference fingerprint or stable flower ID already exists.
 - Do not claim support for a visual feature the engine cannot generate.
 - Do not create a separate generated page or reduced result panel when Studio already provides the required interaction and export workflow.
@@ -75,4 +84,4 @@ For a tested compact-rosette translation, consult [examples/crimson-rose/flower-
 
 ## Handoff
 
-State the generated flower's structural interpretation, the important controls, and any intentional approximations. Link the resulting route and changed source files.
+Lead with the opened flower. State its structural interpretation, important controls, and intentional approximations. Do not mention data paths or implementation files unless the user asks.

@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Install the repository's Codex skill from a local clone."""
+"""Install the repository's Agent Skill from a local clone."""
 
 from __future__ import annotations
 
 import argparse
-import os
 import shutil
 from pathlib import Path
 
@@ -13,10 +12,7 @@ SKILL_NAME = "flower-reference-to-web"
 
 
 def default_skills_dir() -> Path:
-    codex_home = os.environ.get("CODEX_HOME")
-    if codex_home:
-        return Path(codex_home).expanduser() / "skills"
-    return Path.home() / ".codex" / "skills"
+    return Path.home() / ".agents" / "skills"
 
 
 def install(source: Path, destination: Path, copy: bool) -> None:
@@ -40,7 +36,11 @@ def install(source: Path, destination: Path, copy: bool) -> None:
             source,
             destination,
             ignore=shutil.ignore_patterns(
-                "node_modules", ".next", "*.tsbuildinfo", ".DS_Store"
+                "node_modules",
+                ".next",
+                ".flower-studio-dependencies",
+                "*.tsbuildinfo",
+                ".DS_Store",
             ),
         )
         method = "Copied"
@@ -55,7 +55,7 @@ def install(source: Path, destination: Path, copy: bool) -> None:
         method = "Linked"
 
     print(f"{method} {SKILL_NAME} to {destination}")
-    print("Restart Codex, then attach a flower image and invoke $flower-reference-to-web.")
+    print("Start a new agent task, attach a flower image, and invoke flower-reference-to-web.")
 
 
 def main() -> None:
@@ -63,7 +63,7 @@ def main() -> None:
     source = repo_root / "skills" / SKILL_NAME
 
     parser = argparse.ArgumentParser(
-        description="Install the flower-reference-to-web skill from this clone."
+        description="Install the flower-reference-to-web Agent Skill from this clone."
     )
     parser.add_argument(
         "--copy",
@@ -74,7 +74,7 @@ def main() -> None:
         "--skills-dir",
         type=Path,
         default=default_skills_dir(),
-        help="Codex skills directory (default: $CODEX_HOME/skills or ~/.codex/skills).",
+        help="Agent Skills directory (default: ~/.agents/skills).",
     )
     args = parser.parse_args()
 
