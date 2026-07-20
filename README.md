@@ -49,7 +49,6 @@ The engine is a visual translator rather than a botanical reconstruction system.
 SKILL.md              # Workflow and visual constraints
 agents/               # Agent presentation metadata
 references/           # FlowerSpec and engine capability maps
-examples/             # Tested reference translations
 scripts/              # Installation, storage, and runtime helpers
 studio/                # Reusable Studio, flower engine, and exporter
 ```

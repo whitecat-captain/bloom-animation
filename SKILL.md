@@ -53,14 +53,12 @@ Classify the image by visible structure, never by botanical name alone:
 
 Start from the closest existing family only as a seed. Do not expose the old preset picker as the user-facing way to create the flower.
 
-For a tested compact-rosette translation, consult [examples/crimson-rose/flower-spec.md](examples/crimson-rose/flower-spec.md) and its matching [flower-config.json](examples/crimson-rose/flower-config.json).
-
 ### 4. Build the Studio configuration
 
 1. Fingerprint a reachable reference with `python3 scripts/fingerprint_reference.py <reference>`.
 2. Build one JSON object compatible with the `FlowerConfig` shape in `studio/components/flower/flowerConfig.ts`. Give it a stable kebab-case `id`, a human-readable name, `source: "generated"`, reference metadata, params, palette, and optional camera.
 3. Write that object to a temporary JSON file, then run `python3 scripts/upsert_flower.py <temporary-json>`. The script updates the same fingerprint or stable ID and otherwise prepends a new flower in the persistent data store.
-4. Do not create TypeScript files, modify the generated registry, or copy application code for a user flower. Built-in examples may remain compiled into Studio; user flowers must remain external data.
+4. Do not create TypeScript files, modify the built-in preset registry, or copy application code for a user flower. User flowers must remain external data.
 5. Reuse the full Studio design, preview, and export controls. Treat export as a core outcome, not an optional advanced mode.
 6. Do not add a simplified result panel between the generated flower and Studio.
 

@@ -29,7 +29,6 @@ import StudioDesignPane, {
 import StudioExportPane from "./StudioExportPane";
 import WindPreview from "./WindPreview";
 import type { FlowerConfig } from "./flowerConfig";
-import { GENERATED_FLOWERS } from "./generated";
 import { PRESET_FLOWERS } from "./presets";
 
 type BgMode = "transparent" | "solid";
@@ -105,10 +104,7 @@ const DEFAULT_DESIGN_STATE: FlowerDesignState = {
   },
 };
 
-const BUILT_IN_STUDIO_FLOWERS: FlowerConfig[] = [
-  ...GENERATED_FLOWERS,
-  ...PRESET_FLOWERS,
-];
+const BUILT_IN_STUDIO_FLOWERS: FlowerConfig[] = PRESET_FLOWERS;
 
 function applyFlower(scene: FlowerSceneApi, flower: FlowerConfig) {
   scene.applyPreset(flower.params);
