@@ -1,5 +1,7 @@
 # Bloom Animation Generator
 
+[English](./README.md) | [中文](./README.zh.md)
+
 Turn a flower reference into a procedural, editable, and exportable bloom animation.
 
 Upload a reference image, ask the Skill to create a flower from it, and continue in the bundled Flower Studio. The Studio, flower engine, controls, and exporter are already included in this repository; each new flower is saved as data instead of creating another Next.js project.
